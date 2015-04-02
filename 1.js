@@ -1,3 +1,5 @@
+var DEBUG = false;
+
 // library code, woo
 function arraysEqual(a, b) {
   if (a === b) return true;
@@ -58,7 +60,7 @@ State.prototype.equals = function(other) {
   return this.rule === other.rule
     && this.index === other.index
     && this.predecessor === other.predecessor
-    && arrayEquals(this.backPointers, other.backPointers);
+    && arraysEqual(this.backPointers, other.backPointers);
 }
 State.prototype.next = function(){ return this.rule.production[this.index]; } 
 State.prototype.toString = function(){
@@ -145,18 +147,24 @@ function parse(str, grammar) {
     queue[0].push(State(rulesMap[startSym][i], 0, 0));
   }
   
-  for(var i=0; i<str.length; ++i) {
+  for(var i=0; i<=str.length; ++i) {
+    if (DEBUG) console.log('processing position ' + i)
+  
     for(var j=0; j<queue[i].length; ++j) {
       var state = queue[i][j];
+      if (DEBUG) console.log('state ', state.toString())
       if(!state.done()) {
         if(state.next().type == 'NT') {
+          if (DEBUG) console.log('p')
           predictor(state, i);
         }
         else {
+          if (DEBUG) console.log('s', state.next())
           scanner(state, i);
         }
       }
       else {
+          if (DEBUG) console.log('c')
         completer(state, i);
       }
     }
@@ -167,9 +175,9 @@ function parse(str, grammar) {
 
 
 var grammar = [
-  Rule('S', [T('+'), NT('T'), T('+'), T('i')]),
+  Rule('S', [ NT('T'), T('+'), NT('T')]),
   Rule('S', [T('i')]),
   Rule('T', [NT('S')])
 ]
 
-console.log(parse('+i+i', grammar).join('\n'));
+console.log(parse('i+i+i', grammar).join('\n'));
