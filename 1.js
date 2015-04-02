@@ -35,8 +35,6 @@ function NT(data) { return new Sym('NT', data); }
 function T(data) { return new Sym('T', data); }
 
 
-var EPSILON = {}; // a tag for epsilon productions
-
 function Rule(name, production) {
   if (!(this instanceof Rule)) return new Rule(name, production);
   this.name = name;
@@ -65,7 +63,7 @@ function State(rule, index, predecessor, backPointers) {
   if (DEBUG) this.id = id();
   assert(this.index == this.backPointers.length); // honestly could just do away with index at this point
 }
-State.prototype.done = function(){ return this.rule.production === EPSILON || this.index === this.rule.production.length; }
+State.prototype.done = function(){ return this.index === this.rule.production.length; }
 State.prototype.equals = function(other) {
   return this.rule === other.rule
     && this.index === other.index
@@ -132,11 +130,12 @@ function parse(str, grammar) {
       }
     }
     
-    // handle silly nullable cornercase
+    // handle silly nullable cornercase: we might need to "re-run" completer for a nullable
+    // if we are predicting that nullable but it's already been processed
+    // given 'nullable' annotation, we could skip this when 'sym' is not nullable
     for(var i=0; i<queue[strPos].length; ++i) { // can actually abort when we hit current state, but no real need (todo check speedup)
       var candidate = queue[strPos][i];
       if(candidate.rule.name === sym.data && candidate.predecessor === strPos && candidate.done()) {
-        //console.log('asdf', candidate);
         var newBPs = state.backPointers.slice(0);
         newBPs.push(candidate); // 'candidate' is already done
         var advanced = State(state.rule, state.index+1, state.predecessor, newBPs);
@@ -170,9 +169,6 @@ function parse(str, grammar) {
   var startSym = grammar[0].name;
   var gammaRule = Rule(['GAMMA'], [NT(startSym)]); // needs a _unique_ identifier. Easiest way: new object
   queue[0].push(State(gammaRule, 0, 0));
-//  for(var i=0; i<rulesMap[startSym].length; ++i) {
-//    queue[0].push(State(rulesMap[startSym][i], 0, 0));
-//  }
   
   for(var i=0; i<=str.length; ++i) {
     if (DEBUG) console.log('processing position ' + i)
@@ -191,7 +187,7 @@ function parse(str, grammar) {
         }
       }
       else {
-          if (DEBUG) console.log('c')
+        if (DEBUG) console.log('c')
         completer(state, i);
       }
     }
@@ -247,7 +243,7 @@ var grammar = [
   Rule('T', [NT('S')])
 ]
 
-//console.log(parse('i+i+i+i', grammar).join('\n'));
+// console.log(parse('i+i+i+i', grammar).join('\n'));
 
 var grammar = [
   Rule('S', [NT('A'), NT('A'), NT('A'), NT('A')]),
@@ -257,5 +253,18 @@ var grammar = [
   Rule('E', [])
 ]
 
+// console.log(parse('a', grammar).join('\n'));
 
-console.log(parse('a', grammar).join('\n'));
+var grammar = [
+  Rule('S', [NT('X'), NT('S'), NT('X')]),
+  Rule('S', [NT('A')]),
+  Rule('A', [T('a'), NT('T'), T('b')]),
+  Rule('A', [T('b'), NT('T'), T('a')]),
+  Rule('X', [T('a')]),
+  Rule('X', [T('b')]),
+  Rule('T', [NT('X'), NT('T')]),
+  Rule('T', [])
+]
+
+console.log(parse('aabaaabaaa', grammar).join('\n'))
+
