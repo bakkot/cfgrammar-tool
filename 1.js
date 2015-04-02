@@ -175,15 +175,41 @@ function parse(str, grammar) {
   
   
   // done constructing chart; time to check for parses
-  var found = false;
+  var parses = [];
   for(var i=0; i<queue[str.length].length; ++i) {
-    if(queue[str.length][i].rule == gammaRule) {
-      found = true;
-      break;
+    var state = queue[str.length][i];
+    if(state.rule === gammaRule && state.done()) {
+      parses.push(state);
     }
   }
   //if (DEBUG)
-    console.log(found);
+    console.log(parses.length);
+  
+  
+  
+  var INDENT = '  ';
+  function subtreePrinter(state, depth) {
+    var prefix = '';
+    for(var i=0; i<depth; ++i) {
+      prefix += INDENT;
+    }
+    console.log(prefix + state.rule + ' ' + state.backPointers.length);
+    prefix += INDENT;
+    for(var i=0; i<state.backPointers.length; ++i) {
+      var backPointer = state.backPointers[i];
+      if(backPointer === null) { // ie, terminal
+        console.log(prefix + state.rule.production[i].data); 
+      }
+      else {
+        subtreePrinter(backPointer, depth+1);
+      }
+    }
+  }
+  
+  for(var i=0; i<parses.length; ++i) {
+    console.log();
+    subtreePrinter(parses[i], 0);
+  }
   
   
   return queue;
@@ -196,4 +222,4 @@ var grammar = [
   Rule('T', [NT('S')])
 ]
 
-console.log(parse('i+i+i', grammar).join('\n'));
+console.log(parse('i+i+i+i', grammar).join('\n'));
