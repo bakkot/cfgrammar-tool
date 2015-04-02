@@ -35,6 +35,7 @@ function NT(data) { return new Sym('NT', data); }
 function T(data) { return new Sym('T', data); }
 
 
+var EPSILON = {}; // a tag for epsilon productions
 
 function Rule(name, production) {
   if (!(this instanceof Rule)) return new Rule(name, production);
@@ -47,15 +48,24 @@ Rule.prototype.toString = function(){
 
 
 
+
+if(DEBUG) {
+  var _id = 0;
+  function id(){
+    return ++_id;
+  }
+}
+
 function State(rule, index, predecessor, backPointers) {
   if (!(this instanceof State)) return new State(rule, index, predecessor, backPointers);
   this.rule = rule;
   this.index = index;
   this.predecessor = predecessor;
   this.backPointers = backPointers || [];
+  if (DEBUG) this.id = id();
   assert(this.index == this.backPointers.length); // honestly could just do away with index at this point
 }
-State.prototype.done = function(){ return this.index === this.rule.production.length; }
+State.prototype.done = function(){ return this.rule.production === EPSILON || this.index === this.rule.production.length; }
 State.prototype.equals = function(other) {
   return this.rule === other.rule
     && this.index === other.index
@@ -64,8 +74,9 @@ State.prototype.equals = function(other) {
 }
 State.prototype.next = function(){ return this.rule.production[this.index]; } 
 State.prototype.toString = function(){
-  return '(' + this.rule.name + ' -> ' + this.rule.production.slice(0, this.index).join('')
-          + '*' + this.rule.production.slice(this.index).join('') + ', ' + this.predecessor.toString() + ')';
+  return '(' + (DEBUG?(this.id.toString() + ' '):'') + this.rule.name + ' -> ' + this.rule.production.slice(0, this.index).join('')
+          + '*' + this.rule.production.slice(this.index).join('') + ', ' + this.predecessor.toString() 
+          + (DEBUG?(', [' + this.backPointers.map(function(x){return x.id.toString();}).join(',') + ']'):'') + ')';
 }
 
 
@@ -120,6 +131,20 @@ function parse(str, grammar) {
         queue[strPos].push(advanced);
       }
     }
+    
+    // handle silly nullable cornercase
+    for(var i=0; i<queue[strPos].length; ++i) { // can actually abort when we hit current state, but no real need (todo check speedup)
+      var candidate = queue[strPos][i];
+      if(candidate.rule.name === sym.data && candidate.predecessor === strPos && candidate.done()) {
+        //console.log('asdf', candidate);
+        var newBPs = state.backPointers.slice(0);
+        newBPs.push(candidate); // 'candidate' is already done
+        var advanced = State(state.rule, state.index+1, state.predecessor, newBPs);
+        if(!seen(advanced, strPos)) {
+          queue[strPos].push(advanced);
+        }
+      }
+    }
   }
   
   
@@ -127,7 +152,7 @@ function parse(str, grammar) {
     var thisSym = NT(state.rule.name);
     for(var i=0; i<queue[state.predecessor].length; ++i) {
       var prevState = queue[state.predecessor][i];
-      if(thisSym.equals(prevState.next())) {
+      if(!prevState.done() && thisSym.equals(prevState.next())) {
         var newBPs = prevState.backPointers.slice(0);
         newBPs.push(state); // just finished 'state'
         var advanced = State(prevState.rule, prevState.index+1, prevState.predecessor, newBPs);
@@ -193,7 +218,7 @@ function parse(str, grammar) {
     for(var i=0; i<depth; ++i) {
       prefix += INDENT;
     }
-    console.log(prefix + state.rule + ' ' + state.backPointers.length);
+    console.log(prefix + state.rule)// + ' ' + state.backPointers.length);
     prefix += INDENT;
     for(var i=0; i<state.backPointers.length; ++i) {
       var backPointer = state.backPointers[i];
@@ -222,4 +247,15 @@ var grammar = [
   Rule('T', [NT('S')])
 ]
 
-console.log(parse('i+i+i+i', grammar).join('\n'));
+//console.log(parse('i+i+i+i', grammar).join('\n'));
+
+var grammar = [
+  Rule('S', [NT('A'), NT('A'), NT('A'), NT('A')]),
+  Rule('A', [T('a')]),
+  Rule('A', []),
+  Rule('A', [NT('E')]),
+  Rule('E', [])
+]
+
+
+console.log(parse('a', grammar).join('\n'));
