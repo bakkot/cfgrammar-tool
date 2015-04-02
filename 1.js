@@ -1,3 +1,23 @@
+// library code, woo
+function arraysEqual(a, b) {
+  if (a === b) return true;
+  if (a == null || b == null) return false;
+  if (a.length != b.length) return false;
+  for (var i = 0; i < a.length; ++i) {
+    if (a[i] !== b[i]) return false;
+  }
+  return true;
+}
+
+function assert(condition, message) {
+  if (!condition) {
+    throw new Error(message);
+  }
+}
+
+
+
+
 function Sym(type, data) {
   this.type = type;
   this.data = data; 
@@ -25,28 +45,26 @@ Rule.prototype.toString = function(){
 
 
 
-function State(rule, index, predecessor) {
-  if (!(this instanceof State)) return new State(rule, index, predecessor);
+function State(rule, index, predecessor, backPointers) {
+  if (!(this instanceof State)) return new State(rule, index, predecessor, backPointers);
   this.rule = rule;
   this.index = index;
   this.predecessor = predecessor;
+  this.backPointers = backPointers || [];
+  assert(this.index == this.backPointers.length); // honestly could just do away with index at this point
 }
 State.prototype.done = function(){ return this.index === this.rule.production.length; }
 State.prototype.equals = function(other) {
-  return this.rule === other.rule && this.index === other.index && this.predecessor === other.predecessor;
+  return this.rule === other.rule
+    && this.index === other.index
+    && this.predecessor === other.predecessor
+    && arrayEquals(this.backPointers, other.backPointers);
 }
 State.prototype.next = function(){ return this.rule.production[this.index]; } 
 State.prototype.toString = function(){
-  /*var ruleStr = this.rule.toString();
-  return this.rule.substring(0, this.index+5) + '*' + this.rule.substring(this.index+5);
-  */
   return '(' + this.rule.name + ' -> ' + this.rule.production.slice(0, this.index).join('')
           + '*' + this.rule.production.slice(this.index).join('') + ', ' + this.predecessor.toString() + ')';
 }
-
-//x = Rule('A', [NT('B'), T('b')])
-//console.log(State(x, 1, 0).toString())
-
 
 
 
@@ -82,7 +100,9 @@ function parse(str, grammar) {
   
   function scanner(state, strPos) {
     if(state.next().equals(T(str[strPos]))) {
-      var advanced = State(state.rule, state.index+1, state.predecessor);
+      var newBPs = state.backPointers.slice(0);
+      newBPs.push(null); // terminals do not need backpointers, of course
+      var advanced = State(state.rule, state.index+1, state.predecessor, newBPs);
       if(!seen(advanced, strPos+1)) {
         queue[strPos+1].push(advanced);
       }
@@ -105,14 +125,14 @@ function parse(str, grammar) {
     var thisSym = NT(state.rule.name);
     for(var i=0; i<queue[state.predecessor].length; ++i) {
       var prevState = queue[state.predecessor][i];
-      if(!thisSym.equals(prevState.next())) {
-        continue;
-      }
-      
-      var advanced = State(prevState.rule, prevState.index+1, prevState.predecessor);
-      if(!seen(advanced, strPos)) {
-        queue[strPos].push(advanced);
-      }
+      if(thisSym.equals(prevState.next())) {
+        var newBPs = prevState.backPointers.slice(0);
+        newBPs.push(state); // just finished 'state'
+        var advanced = State(prevState.rule, prevState.index+1, prevState.predecessor, newBPs);
+        if(!seen(advanced, strPos)) {
+          queue[strPos].push(advanced);
+        }
+      }      
     }
   }
   
