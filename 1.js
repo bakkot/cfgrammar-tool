@@ -143,9 +143,11 @@ function parse(str, grammar) {
   
   
   var startSym = grammar[0].name;
-  for(var i=0; i<rulesMap[startSym].length; ++i) {
-    queue[0].push(State(rulesMap[startSym][i], 0, 0));
-  }
+  var gammaRule = Rule(['GAMMA'], [NT(startSym)]); // needs a _unique_ identifier. Easiest way: new object
+  queue[0].push(State(gammaRule, 0, 0));
+//  for(var i=0; i<rulesMap[startSym].length; ++i) {
+//    queue[0].push(State(rulesMap[startSym][i], 0, 0));
+//  }
   
   for(var i=0; i<=str.length; ++i) {
     if (DEBUG) console.log('processing position ' + i)
@@ -169,6 +171,20 @@ function parse(str, grammar) {
       }
     }
   }
+  
+  
+  
+  // done constructing chart; time to check for parses
+  var found = false;
+  for(var i=0; i<queue[str.length].length; ++i) {
+    if(queue[str.length][i].rule == gammaRule) {
+      found = true;
+      break;
+    }
+  }
+  //if (DEBUG)
+    console.log(found);
+  
   
   return queue;
 }
