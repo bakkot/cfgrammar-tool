@@ -1,4 +1,5 @@
 var DEBUG = false;
+var PRODUCEALL = false;
 
 // library code, woo
 function arraysEqual(a, b) {
@@ -68,7 +69,7 @@ State.prototype.equals = function(other) {
   return this.rule === other.rule
     && this.index === other.index
     && this.predecessor === other.predecessor
-    && arraysEqual(this.backPointers, other.backPointers);
+    && (!PRODUCEALL || arraysEqual(this.backPointers, other.backPointers)); // logically, 'produceall => pointers equal', otherwise we don't care
 }
 State.prototype.next = function(){ return this.rule.production[this.index]; } 
 State.prototype.toString = function(){
