@@ -1,5 +1,11 @@
+// http://cs.stackexchange.com/questions/40965/cfgs-detecting-infinitely-many-derivations-of-a-single-string
+// http://www.cs.laurentian.ca/jdompierre/html/MATH2056E_W2011/cours/s8.4_closures_relations_BW.pdf
+// https://a2c2a.wordpress.com/2014/09/18/implementing-an-earley-parser-that-handles-nullable-grammars-and-draws-all-unique-parse-trees-in-python/
+// http://web.stanford.edu/~crwong/cfg/grammar.html
+// http://en.wikipedia.org/wiki/Floyd%E2%80%93Warshall_algorithm
+
 var DEBUG = false;
-var PRODUCEALL = false;
+var PRODUCEALL = true;
 
 // library code, woo
 function arraysEqual(a, b) {
@@ -69,7 +75,7 @@ State.prototype.equals = function(other) {
   return this.rule === other.rule
     && this.index === other.index
     && this.predecessor === other.predecessor
-    && (!PRODUCEALL || arraysEqual(this.backPointers, other.backPointers)); // logically, 'produceall => pointers equal', otherwise we don't care
+    && (!PRODUCEALL || arraysEqual(this.backPointers, other.backPointers)); // logically, 'produceall => backpointers equal', otherwise we don't care
 }
 State.prototype.next = function(){ return this.rule.production[this.index]; } 
 State.prototype.toString = function(){
@@ -244,7 +250,7 @@ var grammar = [
   Rule('T', [NT('S')])
 ]
 
-// console.log(parse('i+i+i+i', grammar).join('\n'));
+//parse('i+i+i+i', grammar).join('\n')
 
 var grammar = [
   Rule('S', [NT('A'), NT('A'), NT('A'), NT('A')]),
@@ -254,7 +260,7 @@ var grammar = [
   Rule('E', [])
 ]
 
-// console.log(parse('a', grammar).join('\n'));
+//parse('a', grammar).join('\n')
 
 var grammar = [
   Rule('S', [NT('X'), NT('S'), NT('X')]),
@@ -267,5 +273,19 @@ var grammar = [
   Rule('T', [])
 ]
 
-console.log(parse('aabaaabaaa', grammar).join('\n'))
+//parse('aabaaabaaa', grammar).join('\n')
 
+var grammar = [
+  Rule('S', [NT('S'), NT('S')]),
+  Rule('S', [])
+]
+
+//parse('', grammar)
+
+
+var grammar = [
+  Rule('A', [NT('A'), NT('A')]),
+  Rule('A', [T('a')])
+]
+
+parse('aaaaaaaaaa', grammar)
