@@ -92,22 +92,29 @@ function Grammar(rules) {
   if (!(this instanceof Grammar)) return new Grammar(rules);
   this.rules = rules;
   this.start = rules[0].name;
-  this.rulesMap = {};
+  this.symbolMap = {};
+  this.symbols = [];
+  
   for(var i=0; i<this.rules.length; ++i) {
     var sym = this.rules[i].name;
-    if(!(sym in this.rulesMap)) {
-      this.rulesMap[sym] = [];
+    if(!(sym in this.symbolMap)) {
+      this.symbolMap[sym] = {rules: []};
+      this.symbols.push(sym);
     }
-    this.rulesMap[sym].push(this.rules[i]);
+    this.symbolMap[sym].rules.push(this.rules[i]);
   }
+}
+
+
+// modify the grammar so each rule has a 'nullable' property
+Grammar.prototype.annotateNullables = function() {
+  if(this.hasOwnProperty(containsNullables)) return this.containsNullables; // already done,
 }
 
 
 
 
-
 function parse(str, grammar) {
-  var rulesMap = grammar.rulesMap;
 
 
 
@@ -139,8 +146,8 @@ function parse(str, grammar) {
   
   function predictor(state, strPos) {
     var sym = state.next();
-    for(var i=0; i<rulesMap[sym.data].length; ++i) {
-      var advanced = State(rulesMap[sym.data][i], 0, strPos);
+    for(var i=0; i<grammar.symbolMap[sym.data].rules.length; ++i) {
+      var advanced = State(grammar.symbolMap[sym.data].rules[i], 0, strPos);
       if(!seen(advanced, strPos)) {
         queue[strPos].push(advanced);
       }
