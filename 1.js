@@ -88,18 +88,27 @@ State.prototype.toString = function(){
 
 
 
+function Grammar(rules) {
+  if (!(this instanceof Grammar)) return new Grammar(rules);
+  this.rules = rules;
+  this.start = rules[0].name;
+  this.rulesMap = {};
+  for(var i=0; i<this.rules.length; ++i) {
+    var sym = this.rules[i].name;
+    if(!(sym in this.rulesMap)) {
+      this.rulesMap[sym] = [];
+    }
+    this.rulesMap[sym].push(this.rules[i]);
+  }
+}
+
+
 
 
 
 function parse(str, grammar) {
-  var rulesMap = {};
-  for(var i=0; i<grammar.length; ++i) {
-    var sym = grammar[i].name;
-    if(!(sym in rulesMap)) {
-      rulesMap[sym] = [];
-    }
-    rulesMap[sym].push(grammar[i]);
-  }
+  var rulesMap = grammar.rulesMap;
+
 
 
   var queue = [];
@@ -173,7 +182,7 @@ function parse(str, grammar) {
   
   
   
-  var startSym = grammar[0].name;
+  var startSym = grammar.start;
   var gammaRule = Rule(['GAMMA'], [NT(startSym)]); // needs a _unique_ identifier. Easiest way: new object
   queue[0].push(State(gammaRule, 0, 0));
   
@@ -283,9 +292,9 @@ var grammar = [
 //parse('', grammar)
 
 
-var grammar = [
+var grammar = Grammar([
   Rule('A', [NT('A'), NT('A')]),
   Rule('A', [T('a')])
-]
+])
 
-parse('aaaaaaaaaa', grammar)
+parse('aaaaaa', grammar)
