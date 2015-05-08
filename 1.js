@@ -215,7 +215,7 @@ Grammar.prototype.annotateNullables = function() {
 
 
 // modify the grammar so each symbol has an "unreachable" property
-// ie, no chain of derivations from the start symbol reaches that symbol
+// ie, no chain of derivations from the start symbol reaches that symbol. note that something may be reachable even if no chain which produces a string involves that thing. (eg S -> AB, B->'', A->A. then B is reachable.)
 // grammar gets an "unreachables" property
 // returns the list of unreachables
 Grammar.prototype.annotateUnreachables = function() {
@@ -263,7 +263,7 @@ Grammar.prototype.annotateUseless = function() {
   
   this.uselesses = [];
   var queue = [];
-  var cs = []; // count of non-distinct symbols in RHS of rule i currently marked possibly-useful, which does not make for a good variable name
+  var cs = []; // count of non-distinct symbols in RHS of rule i currently marked possibly-useless, which does not make for a good variable name
   var rMap = this.getReverseMap();
 
   // very similar logic to finding nullables, except things are assumed useless until proven otherwise
@@ -308,6 +308,93 @@ Grammar.prototype.annotateUseless = function() {
 
 
 
+
+// modify the grammar so each symbol has a "selfDeriving" property
+// ie,  A *=> A (via some chain of length > 0)
+// grammar gets a "selfDerivings"
+// returns the list of self-deriving symbols
+// http://cs.stackexchange.com/a/40967/12130
+Grammar.prototype.annotateSelfDeriving = function() {
+  if(this.hasOwnProperty('selfDerivings')) return this.selfDerivings; // already done, don't redo
+  
+  this.selfDerivings = [];
+  
+  this.annotateNullables();
+  
+  var derives = {}; // derives.A.B holds if A *=> B
+  for(var i=0; i<this.symbolsList.length; ++i) {
+    derives[this.symbolsList[i]] = {};
+  }
+  
+  
+  // initialization: set the one-step derivations.
+  o:for(var i=0; i<this.rules.length; ++i) {
+    var name = this.rules[i].name;
+    var production = this.rules[i].production;
+    
+    // easy cases: production empty, contains terminals, or contains exactly one nonterminal
+    if(production.length == 0) {
+      continue;
+    }
+    
+    for(var j=0; j<production.length; ++j) {
+      if(production[j].type == 'T') {
+        continue o;
+      }
+    }
+    
+    if(production.length == 1) {
+      derives[name][production[0].data] = true;
+      continue;
+    }
+    
+    
+    // harder case: production consists of two or more nonterminals. TODO could merge some loops but speedup is negligible probably
+    var nonnullable = null;
+    for(var j=0; j<production.length; ++j) {
+      if(!this.symbolMap[production[j].data].nullable) {
+        if(nonnullable !== null) {
+          continue o; // two or more nonnullable nonterminals: so this rule can't derive any single nonterminal
+        }
+        nonnullable = production[j].data;
+      }
+    }
+    
+    if(nonnullable !== null) { // exactly one nonnullable nonterminal: that and only that is derived.
+      derives[name][nonnullable] = true;
+    }
+    else { // two or more nullable: everything is derived
+      for(var j=0; j<production.length; ++j) {
+        derives[name][production[j].data] = true; // everything is a nonterminal, so this is safe
+      }
+    }
+  }
+  
+  // recursion: floyd-warshall, basically
+  for(var i=0; i<this.symbolsList.length; ++i) {
+    for(var j=0; j<this.symbolsList.length; ++j) {
+      for(var k=0; k<this.symbolsList.length; ++k) {
+        if(derives[this.symbolsList[i]][this.symbolsList[k]] && derives[this.symbolsList[k]][this.symbolsList[j]]) {
+          // if i derives k and k derives j then i derives j
+          derives[this.symbolsList[i]][this.symbolsList[j]];
+        }
+      }
+    }
+  }
+  
+  for(var i=0; i<this.symbolsList.length; ++i) {
+    var cur = this.symbolsList[i];
+    if(derives[cur][cur]) {
+      this.symbolMap[cur].selfDeriving = true;
+      this.selfDerivings.push(cur);
+    }
+    else {
+      this.symbolMap[cur].selfDeriving = false;
+    }
+  }
+  
+  return this.selfDerivings;
+}
 
 
 function parse(str, grammar) {
@@ -521,3 +608,4 @@ parse('aaaaaaaaa', grammar);
 console.log(grammar.annotateUnreachables())
 console.log(grammar.annotateNullables())
 console.log(grammar.annotateUseless())
+console.log(grammar.annotateSelfDeriving())
