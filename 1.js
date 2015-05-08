@@ -7,7 +7,7 @@
 var enums = {
   DISTINCT: {},
   SIMILAR: {},
-  IDENTICAL: {},
+  IDENTICAL: {}, // ie, same rule, index, and predecessor, but different sub-parses
   PRODUCEONE: {},
   PRODUCETWO: {},
   PRODUCEALL: {}
@@ -86,11 +86,10 @@ function State(rule, index, predecessor, backPointers) {
   assert(this.index == this.backPointers.length); // honestly could just do away with index at this point
 }
 State.prototype.done = function(){ return this.index === this.rule.production.length; }
-State.prototype.compare = function(other) { // NB: does not return a boolean
+State.prototype.compare = function(other) {
   if(this.rule === other.rule
-    && this.index === other.index
-    && this.predecessor === other.predecessor
-  ) {
+  && this.index === other.index
+  && this.predecessor === other.predecessor) {
     if(arraysEqual(this.backPointers, other.backPointers)) {
       return enums.IDENTICAL;
     }
@@ -311,7 +310,7 @@ Grammar.prototype.annotateUseless = function() {
 
 // modify the grammar so each symbol has a "selfDeriving" property
 // ie,  A *=> A (via some chain of length > 0)
-// grammar gets a "selfDerivings"
+// grammar gets a "selfDerivings" property
 // returns the list of self-deriving symbols
 // http://cs.stackexchange.com/a/40967/12130
 Grammar.prototype.annotateSelfDeriving = function() {
@@ -534,9 +533,59 @@ function parse(str, grammar) {
     }
   }
   
+  
+  function rewritePrinter(parse) {
+    var str = [parse];
+    
+    function formatIntermediateString(highlightIndex) { // highlightIndex must be a state, not a final symbol
+      var o = '';
+      for(var i=0; i<str.length; ++i) {
+        if(i == highlightIndex) {
+          o += '*' + str[i].rule.name + '*';
+        }
+        else {
+          if(typeof str[i] === 'string') {
+            o += str[i];
+          }
+          else {
+            o += str[i].rule.name;
+          }
+        }
+      }
+      return o;
+    }
+    
+    for(var i = 0; i<str.length; ++i) { // NB: both str.length and i change within the rewrite
+      if(typeof str[i] === 'string') {
+        continue;
+      }
+      
+      var state = str[i];
+      var out = state.rule.toString() + '  |  ';
+      out += formatIntermediateString(i) + '  |  ';
+      
+      var rewritten = [];
+      for(var j=0; j<state.index; ++j) {
+        if(state.rule.production[j].type == 'T') {
+          rewritten.push(state.rule.production[j].data);
+        }
+        else {
+          rewritten.push(state.backPointers[j]);
+        }
+      }
+      str = str.slice(0, i).concat(rewritten).concat(str.slice(i+1));
+      out += formatIntermediateString(-1);
+      console.log(out);
+      --i; // gotta reprocess the index we just rewrote
+    }
+    
+  }
+  
+  
   for(var i=0; i<parses.length; ++i) {
     console.log();
     subtreePrinter(parses[i], 0);
+    rewritePrinter(parses[i]);
   }
   
   
@@ -603,7 +652,7 @@ var grammar = Grammar([
 
 //console.log(grammar.annotateNullables())
 //console.log(grammar.symbolMap);
-parse('aaaaaaaaa', grammar);
+parse('aaa', grammar);
 
 console.log(grammar.annotateUnreachables())
 console.log(grammar.annotateNullables())
