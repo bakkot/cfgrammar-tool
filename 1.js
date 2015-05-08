@@ -5,7 +5,7 @@
 // http://en.wikipedia.org/wiki/Floyd%E2%80%93Warshall_algorithm
 
 var DEBUG = false;
-var PRODUCEALL = false;
+var PRODUCECOUNT = 3; // one=1, some=2, all=3
 
 // library code, woo
 function arraysEqual(a, b) {
@@ -73,11 +73,21 @@ function State(rule, index, predecessor, backPointers) {
   assert(this.index == this.backPointers.length); // honestly could just do away with index at this point
 }
 State.prototype.done = function(){ return this.index === this.rule.production.length; }
-State.prototype.equals = function(other) {
-  return this.rule === other.rule
+State.prototype.equals = function(other) { // -1: precisely identical, 0: not even of same kind (rule, index, position), 1: of same kind but from different possible parses
+  if(this.rule === other.rule
     && this.index === other.index
     && this.predecessor === other.predecessor
-    && (!PRODUCEALL || arraysEqual(this.backPointers, other.backPointers)); // logically, 'produceall => backpointers equal', otherwise we don't care
+  ) {
+    if(arraysEqual(this.backPointers, other.backPointers)) {
+      return -1;
+    }
+    else {
+      return 1;
+    }
+  }
+  else {
+    return 0;
+  }
 }
 State.prototype.next = function(){ return this.rule.production[this.index]; } 
 State.prototype.toString = function(){
@@ -208,8 +218,13 @@ function parse(str, grammar) {
   for(var i=0; i<=str.length; ++i) queue.push([]);
   
   function seen(state, strPos) {
+    var count = 0;
     for (var i=0; i<queue[strPos].length; ++i) {
-      if (state.equals(queue[strPos][i])) {
+      var equalness = state.equals(queue[strPos][i]);
+      if (equalness == -1 || (equalness == 1 && PRODUCECOUNT == 1)) { // either we've seen this exact thing before, or we've seen this modulo different parses and don't care about different parses
+        return true;
+      }
+      if (equalness == 1 && PRODUCECOUNT == 2 && ++count > 1) { // we've seen something similar and do care
         return true;
       }
     }
@@ -345,6 +360,9 @@ function parse(str, grammar) {
 }
 
 
+
+
+
 var grammar = [
   Rule('S', [ NT('T'), T('+'), NT('T')]),
   Rule('S', [T('i')]),
@@ -390,13 +408,13 @@ var grammar = [
 
 var grammar = Grammar([
   Rule('A', [NT('A'), NT('A')]),
-  Rule('A', [T('a')]),
+  Rule('A', [T('a')])/*,
   Rule('A', [NT('B')]),
   Rule('B', [T('b')]),
-  Rule('B', [])
+  Rule('B', [])*/
 ])
 
-parse('b', grammar)
 
-console.log(grammar.annotateNullables())
-console.log(grammar.symbolMap);
+//console.log(grammar.annotateNullables())
+//console.log(grammar.symbolMap);
+parse('aaaaa', grammar);
