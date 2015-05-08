@@ -4,22 +4,37 @@
 // http://web.stanford.edu/~crwong/cfg/grammar.html
 // http://en.wikipedia.org/wiki/Floyd%E2%80%93Warshall_algorithm
 
+var enums = {
+  DISTINCT: {},
+  SIMILAR: {},
+  IDENTICAL: {},
+  PRODUCEONE: {},
+  PRODUCETWO: {},
+  PRODUCEALL: {}
+}
+
+
+
 var DEBUG = false;
-var PRODUCECOUNT = 3; // one=1, some=2, all=3
+var PRODUCECOUNT = enums.PRODUCETWO;
+
+
+
+
 
 // library code, woo
 function arraysEqual(a, b) {
-  if (a === b) return true;
-  if (a == null || b == null) return false;
-  if (a.length != b.length) return false;
-  for (var i = 0; i < a.length; ++i) {
-    if (a[i] !== b[i]) return false;
+  if(a === b) return true;
+  if(a == null || b == null) return false;
+  if(a.length != b.length) return false;
+  for(var i = 0; i < a.length; ++i) {
+    if(a[i] !== b[i]) return false;
   }
   return true;
 }
 
 function assert(condition, message) {
-  if (!condition) {
+  if(!condition) {
     throw new Error(message);
   }
 }
@@ -43,7 +58,7 @@ function T(data) { return new Sym('T', data); }
 
 
 function Rule(name, production) {
-  if (!(this instanceof Rule)) return new Rule(name, production);
+  if(!(this instanceof Rule)) return new Rule(name, production);
   this.name = name; // LHS
   this.production = production; // RHS\
   // once added to a grammar, also have an 'index' property indicating their location in the grammar
@@ -54,8 +69,6 @@ Rule.prototype.toString = function(){
 }
 
 
-
-
 if(DEBUG) {
   var _id = 0;
   function id(){
@@ -64,29 +77,29 @@ if(DEBUG) {
 }
 
 function State(rule, index, predecessor, backPointers) {
-  if (!(this instanceof State)) return new State(rule, index, predecessor, backPointers);
+  if(!(this instanceof State)) return new State(rule, index, predecessor, backPointers);
   this.rule = rule;
   this.index = index;
   this.predecessor = predecessor;
   this.backPointers = backPointers || [];
-  if (DEBUG) this.id = id();
+  if(DEBUG) this.id = id();
   assert(this.index == this.backPointers.length); // honestly could just do away with index at this point
 }
 State.prototype.done = function(){ return this.index === this.rule.production.length; }
-State.prototype.equals = function(other) { // -1: precisely identical, 0: not even of same kind (rule, index, position), 1: of same kind but from different possible parses
+State.prototype.compare = function(other) { // NB: does not return a boolean
   if(this.rule === other.rule
     && this.index === other.index
     && this.predecessor === other.predecessor
   ) {
     if(arraysEqual(this.backPointers, other.backPointers)) {
-      return -1;
+      return enums.IDENTICAL;
     }
     else {
-      return 1;
+      return enums.SIMILAR;
     }
   }
   else {
-    return 0;
+    return enums.DISTINCT;
   }
 }
 State.prototype.next = function(){ return this.rule.production[this.index]; } 
@@ -101,7 +114,7 @@ State.prototype.toString = function(){
 
 
 function Grammar(rules) {
-  if (!(this instanceof Grammar)) return new Grammar(rules);
+  if(!(this instanceof Grammar)) return new Grammar(rules);
   this.rules = rules;
   this.start = rules[0].name;
   this.symbolMap = {}; // initially just rules for each symbol; eventually can contain annotations like 'nullable'
@@ -149,13 +162,10 @@ Grammar.prototype.annotateNullables = function() {
   if(this.hasOwnProperty('nullables')) return this.nullables; // already done, don't redo
   
   this.nullables = [];
-  
   var queue = [];
   var cs = []; // count of non-distinct symbols in RHS of rule i currently marked non-nullable, which does not make for a good variable name
   var rMap = this.getReverseMap();
-  
-  
-    
+
   for(var i=0; i<this.symbolsList.length; ++i) {
     this.symbolMap[this.symbolsList[i]].nullable = false;
   }
@@ -204,8 +214,16 @@ Grammar.prototype.annotateNullables = function() {
 }
 
 
+// modify the grammar so each symbol has an "unreachable" property
+// ie, no chain of derivations from the start symbol reaches that symbol
+// grammar gets an "unreachables" property
+// returns the list of unreachables
+Grammar.prototype.annotateUnreachables = function() {
+  if(this.hasOwnProperty('unreachables')) return this.unreachables; // already done, don't redo
+  
+  this.unreachables = [];
 
-
+}
 
 
 
@@ -219,12 +237,12 @@ function parse(str, grammar) {
   
   function seen(state, strPos) {
     var count = 0;
-    for (var i=0; i<queue[strPos].length; ++i) {
-      var equalness = state.equals(queue[strPos][i]);
-      if (equalness == -1 || (equalness == 1 && PRODUCECOUNT == 1)) { // either we've seen this exact thing before, or we've seen this modulo different parses and don't care about different parses
+    for(var i=0; i<queue[strPos].length; ++i) {
+      var equalness = state.compare(queue[strPos][i]);
+      if(equalness == enums.IDENTICAL || (equalness == enums.SIMILAR && PRODUCECOUNT == enums.PRODUCEONE)) { // either we've seen this exact thing before, or we've seen this modulo different parses and don't care about different parses
         return true;
       }
-      if (equalness == 1 && PRODUCECOUNT == 2 && ++count > 1) { // we've seen something similar and do care
+      if(equalness == enums.SIMILAR && PRODUCECOUNT == enums.PRODUCETWO && ++count > 1) { // we've seen something similar and do care
         return true;
       }
     }
@@ -294,23 +312,23 @@ function parse(str, grammar) {
   queue[0].push(State(gammaRule, 0, 0));
   
   for(var i=0; i<=str.length; ++i) {
-    if (DEBUG) console.log('processing position ' + i)
+    if(DEBUG) console.log('processing position ' + i)
   
     for(var j=0; j<queue[i].length; ++j) {
       var state = queue[i][j];
-      if (DEBUG) console.log('state ', state.toString())
+      if(DEBUG) console.log('state ', state.toString())
       if(!state.done()) {
         if(state.next().type == 'NT') {
-          if (DEBUG) console.log('p')
+          if(DEBUG) console.log('p')
           predictor(state, i);
         }
         else {
-          if (DEBUG) console.log('s', state.next())
+          if(DEBUG) console.log('s', state.next())
           scanner(state, i);
         }
       }
       else {
-        if (DEBUG) console.log('c')
+        if(DEBUG) console.log('c')
         completer(state, i);
       }
     }
@@ -326,7 +344,7 @@ function parse(str, grammar) {
       parses.push(state);
     }
   }
-  //if (DEBUG)
+  //if(DEBUG)
     console.log(parses.length);
   
   
@@ -417,4 +435,4 @@ var grammar = Grammar([
 
 //console.log(grammar.annotateNullables())
 //console.log(grammar.symbolMap);
-parse('aaaaa', grammar);
+parse('aaaaaaaaa', grammar);
