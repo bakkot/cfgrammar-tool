@@ -5,7 +5,7 @@
 // http://en.wikipedia.org/wiki/Floyd%E2%80%93Warshall_algorithm
 
 var DEBUG = false;
-var PRODUCEALL = true;
+var PRODUCEALL = false;
 
 // library code, woo
 function arraysEqual(a, b) {
@@ -44,8 +44,10 @@ function T(data) { return new Sym('T', data); }
 
 function Rule(name, production) {
   if (!(this instanceof Rule)) return new Rule(name, production);
-  this.name = name;
-  this.production = production;
+  this.name = name; // LHS
+  this.production = production; // RHS\
+  // once added to a grammar, also have an 'index' property indicating their location in the grammar
+  // corollary: do not add a rule to more than one grammar
 }
 Rule.prototype.toString = function(){
   return this.name + ' -> ' + this.production.join('');
@@ -81,7 +83,7 @@ State.prototype.next = function(){ return this.rule.production[this.index]; }
 State.prototype.toString = function(){
   return '(' + (DEBUG?(this.id.toString() + ' '):'') + this.rule.name + ' -> ' + this.rule.production.slice(0, this.index).join('')
           + '*' + this.rule.production.slice(this.index).join('') + ', ' + this.predecessor.toString() 
-          + (DEBUG?(', [' + this.backPointers.map(function(x){return x.id.toString();}).join(',') + ']'):'') + ')';
+          + (DEBUG?(', [' + this.backPointers.map(function(x){return x===null?'null':x.id.toString();}).join(',') + ']'):'') + ')';
 }
 
 
@@ -92,32 +94,116 @@ function Grammar(rules) {
   if (!(this instanceof Grammar)) return new Grammar(rules);
   this.rules = rules;
   this.start = rules[0].name;
-  this.symbolMap = {};
-  this.symbols = [];
+  this.symbolMap = {}; // initially just rules for each symbol; eventually can contain annotations like 'nullable'
+  this.symbolsList = [];
   
   for(var i=0; i<this.rules.length; ++i) {
+    this.rules[i].index = i;
     var sym = this.rules[i].name;
     if(!(sym in this.symbolMap)) {
       this.symbolMap[sym] = {rules: []};
-      this.symbols.push(sym);
+      this.symbolsList.push(sym);
     }
     this.symbolMap[sym].rules.push(this.rules[i]);
   }
 }
 
 
-// modify the grammar so each rule has a 'nullable' property
+// get a map from symbols to a list of the rules they appear in the RHS of
+// if a symbol appears in a RHS more than once, that rule will appear more than once in the list
+// modifies the grammar to have _reverseMap property, for caching
+Grammar.prototype.getReverseMap = function() {
+  if(!this.hasOwnProperty('_reverseMap')) {
+    this._reverseMap = {};
+    for(var i=0; i<this.symbolsList.length; ++i) {
+      this._reverseMap[this.symbolsList[i]] = [];
+    }
+    for(var i=0; i<this.rules.length; ++i) {
+      var rule = this.rules[i];
+      for(var j=0; j<rule.production.length; ++j) {
+        if(rule.production[j].type === 'NT') {
+          this._reverseMap[rule.production[j].data].push(rule);
+        }
+      }
+    }
+  }
+  
+  return this._reverseMap;
+}
+
+// modify the grammar so each symbol has a 'nullable' property
+// and the grammar to have a 'nullables' property, a list of nullable symbols
+// returns the list of nullables
+// http://cstheory.stackexchange.com/a/2493
 Grammar.prototype.annotateNullables = function() {
-  if(this.hasOwnProperty(containsNullables)) return this.containsNullables; // already done,
+  if(this.hasOwnProperty('nullables')) return this.nullables; // already done, don't redo
+  
+  this.nullables = [];
+  
+  var queue = [];
+  var cs = []; // count of non-distinct symbols in RHS of rule i currently marked non-nullable, which does not make for a good variable name
+  var rMap = this.getReverseMap();
+  
+  
+    
+  for(var i=0; i<this.symbolsList.length; ++i) {
+    this.symbolMap[this.symbolsList[i]].nullable = false;
+  }
+  
+  for(var i=0; i<this.rules.length; ++i) {
+    var c = 0;
+    var rule = this.rules[i];
+    var maybeNullable = true; // does this rule produce a string with only nonterminals?
+    for(var j=0; j<rule.production.length; ++j) {
+      if(rule.production[j].type === 'NT') {
+        ++c;
+      }
+      else {
+        maybeNullable = false;
+        break;
+      }
+    }
+    if(maybeNullable) {
+      cs.push(c);
+    }
+    else {
+      cs.push(0);
+    }
+    
+    
+    if(rule.production.length == 0 && !this.symbolMap[rule.name].nullable) {
+      this.symbolMap[rule.name].nullable = true;
+      queue.push(rule.name);
+      this.nullables.push(rule.name);
+    }
+  }
+  
+  while(queue.length > 0) {
+    var cur = queue.pop();
+    for(var i=0; i<rMap[cur].length; ++i) {
+      var affected = rMap[cur][i];
+      if(--cs[affected.index] === 0 && !this.symbolMap[affected.name].nullable) { // can only have been positive if the rule contained no terminals, so ok
+        this.symbolMap[affected.name].nullable = true;
+        queue.push(affected.name);
+        this.nullables.push(affected.name);
+      }
+    }
+  }
+  
+  return this.nullables;
 }
 
 
 
 
+
+
+
+
+
+
+
 function parse(str, grammar) {
-
-
-
   var queue = [];
   for(var i=0; i<=str.length; ++i) queue.push([]);
   
@@ -129,8 +215,6 @@ function parse(str, grammar) {
     }
     return false;
   }
-  
-  
   
   function scanner(state, strPos) {
     if(state.next().equals(T(str[strPos]))) {
@@ -167,6 +251,7 @@ function parse(str, grammar) {
         }
       }
     }
+    
   }
   
   
@@ -268,17 +353,19 @@ var grammar = [
 
 //parse('i+i+i+i', grammar).join('\n')
 
-var grammar = [
+var grammar = Grammar([
   Rule('S', [NT('A'), NT('A'), NT('A'), NT('A')]),
   Rule('A', [T('a')]),
   Rule('A', []),
   Rule('A', [NT('E')]),
   Rule('E', [])
-]
+])
 
+//console.log(grammar.annotateNullables())
+//console.log(grammar.symbolMap);
 //parse('a', grammar).join('\n')
 
-var grammar = [
+var grammar = Grammar([
   Rule('S', [NT('X'), NT('S'), NT('X')]),
   Rule('S', [NT('A')]),
   Rule('A', [T('a'), NT('T'), T('b')]),
@@ -287,8 +374,10 @@ var grammar = [
   Rule('X', [T('b')]),
   Rule('T', [NT('X'), NT('T')]),
   Rule('T', [])
-]
+])
 
+//console.log(grammar.annotateNullables())
+//console.log(grammar.symbolMap);
 //parse('aabaaabaaa', grammar).join('\n')
 
 var grammar = [
@@ -301,7 +390,13 @@ var grammar = [
 
 var grammar = Grammar([
   Rule('A', [NT('A'), NT('A')]),
-  Rule('A', [T('a')])
+  Rule('A', [T('a')]),
+  Rule('A', [NT('B')]),
+  Rule('B', [T('b')]),
+  Rule('B', [])
 ])
 
-parse('aaaaaa', grammar)
+parse('b', grammar)
+
+console.log(grammar.annotateNullables())
+console.log(grammar.symbolMap);
