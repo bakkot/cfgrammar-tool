@@ -222,10 +222,89 @@ Grammar.prototype.annotateUnreachables = function() {
   if(this.hasOwnProperty('unreachables')) return this.unreachables; // already done, don't redo
   
   this.unreachables = [];
+  var queue = [this.start];
 
+  for(var i=0; i<this.symbolsList.length; ++i) {
+    this.symbolMap[this.symbolsList[i]].unreachable = true;
+  }
+  this.symbolMap[this.start].unreachable = false;
+  
+
+  while(queue.length > 0) {
+    var cur = queue.pop();
+    for(var j=0; j<this.symbolMap[cur].rules.length; ++j) {
+      var rule = this.symbolMap[cur].rules[j];
+      for(var k=0; k<rule.production.length; ++k) {
+        var sym = rule.production[k];
+        if(sym.type === 'NT' && this.symbolMap[sym.data].unreachable) {
+          this.symbolMap[sym.data].unreachable = false;
+          queue.push(sym.data);
+        }
+      }
+    }
+  }
+  
+  for(var i=0; i<this.symbolsList.length; ++i) {
+    if(this.symbolMap[this.symbolsList[i]].unreachable) {
+      this.unreachables.push(this.symbolsList[i]);
+    }
+  }
+  
+  return this.unreachables;
 }
 
 
+// modify the grammar so each symbol has a "useless" property
+// ie, there is no terminal string derivable from that symbol
+// grammar gets a "uselesses" property (forgive me)
+// returns the list of useless symbols
+Grammar.prototype.annotateUseless = function() {
+  if(this.hasOwnProperty('uselesses')) return this.uselesses; // already done, don't redo
+  
+  this.uselesses = [];
+  var queue = [];
+  var cs = []; // count of non-distinct symbols in RHS of rule i currently marked possibly-useful, which does not make for a good variable name
+  var rMap = this.getReverseMap();
+
+  // very similar logic to finding nullables, except things are assumed useless until proven otherwise
+  for(var i=0; i<this.symbolsList.length; ++i) {
+    this.symbolMap[this.symbolsList[i]].useless = true;
+  }
+  
+  for(var i=0; i<this.rules.length; ++i) {
+    var c = 0;
+    var rule = this.rules[i];
+    for(var j=0; j<rule.production.length; ++j) {
+      if(rule.production[j].type === 'NT') {
+        ++c;
+      }
+    }
+    cs.push(c);
+    if(c == 0 && this.symbolMap[rule.name].useless) {
+      this.symbolMap[rule.name].useless = false;
+      queue.push(rule.name);
+    }
+  }
+  
+  while(queue.length > 0) {
+    var cur = queue.pop();
+    for(var i=0; i<rMap[cur].length; ++i) {
+      var affected = rMap[cur][i];
+      if(--cs[affected.index] === 0 && this.symbolMap[affected.name].useless) {
+        this.symbolMap[affected.name].useless = false;
+        queue.push(affected.name);
+      }
+    }
+  }
+
+  for(var i=0; i<this.symbolsList.length; ++i) {
+    if(this.symbolMap[this.symbolsList[i]].useless) {
+      this.uselesses.push(this.symbolsList[i]);
+    }
+  }
+  
+  return this.uselesses;
+}
 
 
 
@@ -426,13 +505,19 @@ var grammar = [
 
 var grammar = Grammar([
   Rule('A', [NT('A'), NT('A')]),
-  Rule('A', [T('a')])/*,
+  Rule('A', [T('a')]),
   Rule('A', [NT('B')]),
   Rule('B', [T('b')]),
-  Rule('B', [])*/
+  Rule('B', []),
+  Rule('C', [NT('A'), NT('C')]),
+  Rule('D', [NT('A')])
 ])
 
 
 //console.log(grammar.annotateNullables())
 //console.log(grammar.symbolMap);
 parse('aaaaaaaaa', grammar);
+
+console.log(grammar.annotateUnreachables())
+console.log(grammar.annotateNullables())
+console.log(grammar.annotateUseless())
