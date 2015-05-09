@@ -61,8 +61,15 @@ function Rule(name, production) {
   if(!(this instanceof Rule)) return new Rule(name, production);
   this.name = name; // LHS
   this.production = production; // RHS\
-  // once added to a grammar, also have an 'index' property indicating their location in the grammar
-  // corollary: do not add a rule to more than one grammar
+}
+Rule.prototype.equals = function(other) {
+  if(other.name !== this.name) return false;
+  if(other.production.length !== this.production.length) return false;
+  
+  for(var i=0; i<other.production.length; ++i) {
+    if(!other.production[i].equals(this.production[i])) return false;
+  }
+  return true;
 }
 Rule.prototype.toString = function(){
   return this.name + ' -> ' + this.production.join('');
@@ -120,7 +127,6 @@ function Grammar(rules) {
   this.symbolsList = [];
   
   for(var i=0; i<this.rules.length; ++i) {
-    this.rules[i].index = i;
     var sym = this.rules[i].name;
     if(!(sym in this.symbolMap)) {
       this.symbolMap[sym] = {rules: []};
@@ -196,18 +202,27 @@ Grammar.prototype.annotateNullables = function() {
       this.nullables.push(rule.name);
     }
   }
+
+  for(var i=0; i<this.rules.length; ++i) {
+    this.rules[i]._index = i;
+  }
   
   while(queue.length > 0) {
     var cur = queue.pop();
     for(var i=0; i<rMap[cur].length; ++i) {
       var affected = rMap[cur][i];
-      if(--cs[affected.index] === 0 && !this.symbolMap[affected.name].nullable) { // can only have been positive if the rule contained no terminals, so ok
+      if(--cs[affected._index] === 0 && !this.symbolMap[affected.name].nullable) { // can only have been positive if the rule contained no terminals, so ok
         this.symbolMap[affected.name].nullable = true;
         queue.push(affected.name);
         this.nullables.push(affected.name);
       }
     }
   }
+
+  for(var i=0; i<this.rules.length; ++i) {
+    delete this.rules[i]._index;
+  }
+
   
   return this.nullables;
 }
@@ -284,12 +299,17 @@ Grammar.prototype.annotateUseless = function() {
       queue.push(rule.name);
     }
   }
+
+  for(var i=0; i<this.rules.length; ++i) {
+    this.rules[i]._index = i;
+  }
+
   
   while(queue.length > 0) {
     var cur = queue.pop();
     for(var i=0; i<rMap[cur].length; ++i) {
       var affected = rMap[cur][i];
-      if(--cs[affected.index] === 0 && this.symbolMap[affected.name].useless) {
+      if(--cs[affected._index] === 0 && this.symbolMap[affected.name].useless) {
         this.symbolMap[affected.name].useless = false;
         queue.push(affected.name);
       }
@@ -300,6 +320,10 @@ Grammar.prototype.annotateUseless = function() {
     if(this.symbolMap[this.symbolsList[i]].useless) {
       this.uselesses.push(this.symbolsList[i]);
     }
+  }
+
+  for(var i=0; i<this.rules.length; ++i) {
+    delete this.rules[i]._index;
   }
   
   return this.uselesses;
@@ -394,6 +418,181 @@ Grammar.prototype.annotateSelfDeriving = function() {
   
   return this.selfDerivings;
 }
+
+
+
+
+
+
+
+// returns a copy of the grammar without useless symbols. does not modify the grammar,
+// except annotating. if the result is empty, returns {empty: true}.
+Grammar.prototype.strippedUseless = function() {
+  this.annotateUseless();
+  var newRules = [];
+  
+  // first eliminate useless rules. NB: useless, then unreachable. not the other way around.
+  for(var i=0; i<this.rules.length; ++i) {
+    var rule = this.rules[i];
+    if(!this.symbolMap[rule.name].useless) {
+      var j;
+      for(j=0; j<rule.production.length; ++j) {
+        if(rule.production[j].type == 'NT' && this.symbolMap[rule.production[j].data].useless) {
+          break;
+        }
+      }
+      if(j == rule.production.length) { // ie rule does not contain any useless symbols
+        newRules.push(rule);
+      }
+    }
+  }
+  
+  if(newRules.length == 0) {
+    return {empty: true};
+  }
+  
+  var newGrammar = Grammar(newRules);
+  assert(newGrammar.annotateUseless().length == 0, 'Haven\'t actually eliminated all useless productions?');
+  
+  return newGrammar;
+}
+
+// returns a copy of the grammar without useless symbols. does not modify the grammar,
+// except annotating. if the result is empty, returns {empty: true}.
+Grammar.prototype.strippedUnreachable = function() {
+  this.annotateUnreachables();
+  newRules = [];
+  for(var i=0; i<this.rules.length; ++i) {
+    var rule = this.rules[i];
+    if(!this.symbolMap[rule.name].unreachable) {
+      // sufficient that the LHS is unreachable, since RHS does not contain unreachable unless LHS is unreachable
+      newRules.push(rule);
+    }
+  }
+
+  if(newRules.length == 0) {
+    return {empty: true};
+  }
+  
+  var newGrammar = Grammar(newRules);
+  assert(newGrammar.annotateUnreachables().length == 0, 'Haven\'t actually eliminated all unreachable productions?');
+  
+  return newGrammar;
+}
+
+// returns a copy of the grammar without useless or unreachable symbols.
+// also removes duplicate rules and rules of the form A->A. does not modify the grammar,
+// except annotating. if the result is empty, returns {empty: true}.
+Grammar.prototype.stripped = function() {
+  // useless, then unreachable. not the other way around.
+  var newGrammar = this.strippedUseless();
+  if(newGrammar.empty) return newGrammar;
+  
+  newGrammar = newGrammar.strippedUnreachable();
+  if(newGrammar.empty) return newGrammar;
+
+  assert(newGrammar.annotateUseless().length == 0, 'Suddenly there are more useless symbols?');
+  
+  var newRules = [];
+  for(var i=0; i<newGrammar.rules.length; ++i) {
+    var rule = newGrammar.rules[i];
+    if(rule.production.length == 1 && rule.production[0].type == 'NT' && rule.production[0].data == rule.name) {
+      continue; // A -> A
+    }
+    var j;
+    for(j=0; j<newRules.length; ++j) {
+      if(newRules[j].equals(rule)) {
+        break;
+      }
+    }
+    if(j == newRules.length) {
+      newRules.push(rule);
+    }
+  }
+  
+  return Grammar(newRules);
+}
+
+
+
+
+function nthSubset(list, n) { // not exactly the world's most efficient implement, but whatever.
+  var out = [];
+  for(var i = 0, p = 1; p<=n; ++i, p<<=1) {
+    if(p & n) {
+      out.push(list[i]);
+    }
+  }
+  return out;
+}
+
+
+// returns a copy of the grammar which recognizes the same language (except without the empty string)
+// does not modify the grammar. new grammar has a property 'makesEpsilon' which is true iff epsilon
+// was recognized by the original grammar.
+// if the language is otherwise empty, returns {empty: true, makesEpsilon: [as appropriate]}
+Grammar.prototype.deNulled = function() {
+
+  var newGrammar = this.stripped();
+  if(newGrammar.empty) {
+    newGrammar.makesEpsilon = false;
+    return newGrammar;
+  }
+  
+  newGrammar.annotateNullables();
+  var makesEpsilon = newGrammar.symbolMap[newGrammar.start].nullable;
+  newRules = [];
+  for(var i=0; i<newGrammar.rules.length; ++i) {
+    var rule = newGrammar.rules[i];
+    if(rule.production.length == 0) {
+      continue; // do not add epsilon productions
+    }
+    var nullableRHSIndices = [];
+    for(var j=0; j<rule.production.length; ++j) {
+      if(rule.production[j].type == 'NT' && newGrammar.symbolMap[rule.production[j].data].nullable) {
+        nullableRHSIndices.push(j);
+      }
+    }
+    
+    if(nullableRHSIndices.length == 0) { // don't actually need this case, but meh.
+      newRules.push(rule);
+      continue;
+    }
+    
+    var skipFinal = (nullableRHSIndices.length == rule.production.length)?1:0; // if all X's are nullable, do not make an epsilon production.
+    var lastSubset = Math.pow(2, nullableRHSIndices.length) - skipFinal;
+    
+    // one new rule for each subset of nullable RHS symbols, omitting precisely that subset
+    for(var j = 0; j<lastSubset; ++j) {
+      var skippedSubset = nthSubset(nullableRHSIndices, j);
+      
+      var newProduction = [];
+      for(var k=0; k<rule.production.length; ++k) {
+        if(skippedSubset.indexOf(k) == -1) {
+          newProduction.push(rule.production[k]);
+        }
+      }
+      
+      newRules.push(Rule(rule.name, newProduction));
+    }
+    
+  }
+  
+  if(newRules.length == 0) {
+    return {empty: true, makesEpsilon: makesEpsilon};
+  }
+  
+  newGrammar = Grammar(newRules);
+  assert(newGrammar.annotateNullables().length == 0, 'Having removed nullables, there are still nullables.');
+  
+  newGrammar = newGrammar.stripped();
+  newGrammar.makesEpsilon = makesEpsilon;
+  return newGrammar;
+}
+
+
+
+
 
 
 function parse(str, grammar) { // TODO change order, jeebus
@@ -509,7 +708,7 @@ function parse(str, grammar) { // TODO change order, jeebus
       parses.push(state);
     }
   }
-  //if(DEBUG)
+  if(DEBUG)
     console.log(parses.length);
   
   
@@ -582,11 +781,13 @@ function parse(str, grammar) { // TODO change order, jeebus
   }
   
   
+  /*
   for(var i=0; i<parses.length; ++i) {
     console.log();
     subtreePrinter(parses[i], 0);
     rewritePrinter(parses[i]);
   }
+  */
   
   
   return parses;
@@ -631,20 +832,30 @@ function domRule(rule) {
 function domPrinter(parse) {
   var str = [parse];
   
-  function formatIntermediateString(highlightIndex) { // highlightIndex must be a state, not a final symbol
+  function formatIntermediateString(highlightStart, highlightLength) {
+    if(typeof highlightLength !== 'number' || highlightLength < 0) highlightLength = 1;
+    
     var o = document.createElement('span');
+    c = o;
     for(var i=0; i<str.length; ++i) {
+      if(i == highlightStart) {
+        c = document.createElement('span');
+        c.className = 'cfg-rewrite';
+        o.appendChild(c);
+      }
+      
+      if(i - highlightStart >= highlightLength) {
+        c = o;
+      }
+      
       if(typeof str[i] === 'string') {
-        o.appendChild(document.createTextNode(str[i]));
+        c.appendChild(document.createTextNode(str[i]));
       }
       else {
         var sp = document.createElement('span');
         sp.className = 'cfg-symbol';
-        if(i == highlightIndex) {
-          sp.className += ' cfg-rewrite';
-        }
         sp.appendChild(document.createTextNode(str[i].rule.name));
-        o.appendChild(sp);
+        c.appendChild(sp);
       }
     }
     return o;
@@ -662,15 +873,15 @@ function domPrinter(parse) {
   var row = document.createElement('tr');
   var cell = document.createElement('td');
   var sp = document.createElement('sp');
-  sp.className = 'cfg-start';
-  sp.appendChild(document.createTextNode('Start'));
+  sp.className = 'cfg-rule';
+  sp.innerHTML = 'Start \u2192 ' + '<span class="cfg-symbol">' + parse.backPointers[0].rule.name + '</span>';
   cell.appendChild(sp);
   row.appendChild(cell);
 
   cell = document.createElement('td');
   var sp = document.createElement('span');
-  sp.className = 'cfg-rule';
-  sp.innerHTML = 'Start \u2192 ' + parse.backPointers[0].rule.name;
+  sp.className = 'cfg-start';
+  sp.appendChild(document.createTextNode('Start'));
   cell.appendChild(sp);
   row.appendChild(cell);
   
@@ -712,7 +923,7 @@ function domPrinter(parse) {
     str = str.slice(0, i).concat(rewritten).concat(str.slice(i+1));
 
     cell = document.createElement('td');
-    cell.appendChild(formatIntermediateString(-1));
+    cell.appendChild(formatIntermediateString(i, rewritten.length));
     row.appendChild(cell);
     out.appendChild(row);
 
@@ -758,7 +969,7 @@ var grammar = Grammar([
 
 //console.log(grammar.annotateNullables())
 //console.log(grammar.symbolMap);
-parse('aabaaabaaa', grammar).join('\n')
+//parse('aabaaabaaa', grammar).join('\n')
 
 var grammar = [
   Rule('S', [NT('S'), NT('S')]),
@@ -781,9 +992,15 @@ var grammar = Grammar([
 
 //console.log(grammar.annotateNullables())
 //console.log(grammar.symbolMap);
-parse('aaa', grammar);
+//parse('aaa', grammar);
 
-console.log(grammar.annotateUnreachables())
-console.log(grammar.annotateNullables())
-console.log(grammar.annotateUseless())
-console.log(grammar.annotateSelfDeriving())
+//console.log(grammar.annotateUnreachables())
+//console.log(grammar.annotateNullables())
+//console.log(grammar.annotateUseless())
+//console.log(grammar.annotateSelfDeriving())
+
+
+o = grammar.deNulled()
+for(var i=0; i<o.rules.length; ++i) {
+  console.log(o.rules[i].toString())
+}
