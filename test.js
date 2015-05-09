@@ -1,16 +1,17 @@
 var parse = require('./parser').parse;
 var subtreePrinter = require('./printers').subtreePrinter;
 var rewritePrinter = require('./printers').rewritePrinter;
+var generator = require('./generate');
 
-var grammar = [
+var grammar3 = Grammar([
   Rule('S', [ NT('T'), T('+'), NT('T')]),
   Rule('S', [T('i')]),
   Rule('T', [NT('S')])
-]
+])
 
-//parse('i+i+i+i', grammar).join('\n')
+//parse('i+i+i+i', grammar3).join('\n')
 
-var grammar = Grammar([
+var grammar2 = Grammar([
   Rule('S', [NT('A'), NT('A'), NT('A'), NT('A')]),
   Rule('A', [T('a')]),
   Rule('A', []),
@@ -18,9 +19,9 @@ var grammar = Grammar([
   Rule('E', [])
 ])
 
-//console.log(grammar.annotateNullables())
-//console.log(grammar.symbolMap);
-//parse('a', grammar).join('\n')
+//console.log(grammar2.annotateNullables())
+//console.log(grammar2.symbolMap);
+//parse('a', grammar2).join('\n')
 
 var grammar1 = Grammar([
   Rule('S', [NT('X'), NT('S'), NT('X')]),
@@ -67,6 +68,19 @@ console.log(grammar.annotateUseless())
 console.log(grammar.annotateSelfDeriving())
 //*/
 
+
+var grammar4 = Grammar([
+  Rule('A', [NT('B'), NT('B')]),
+  Rule('A', [NT('B')]),
+  Rule('B', [T('b')]),
+  Rule('B', [NT('A')]),
+  Rule('B', [])
+])
+
+
+
+
+/*
 o = grammar1.deNulled()
 for(var i=0; i<o.rules.length; ++i) {
   console.log(o.rules[i].toString())
@@ -83,4 +97,17 @@ for(var i=0; i<parses.length; ++i) {
   rewritePrinter(parses[i]);
 }
 
+*/
 
+
+x = grammar4.deNulled();
+x.printRules()
+console.log(x.annotateSelfDeriving())
+console.log(grammar4.annotateSelfDeriving())
+
+f = generator(grammar4);
+console.log(f(4));
+
+
+
+// TODO some testing about the proper order to strip things, to make grammar as small as possible.

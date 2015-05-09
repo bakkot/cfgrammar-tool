@@ -3,10 +3,11 @@
 // https://a2c2a.wordpress.com/2014/09/18/implementing-an-earley-parser-that-handles-nullable-grammars-and-draws-all-unique-parse-trees-in-python/
 // http://web.stanford.edu/~crwong/cfg/grammar.html
 // http://en.wikipedia.org/wiki/Floyd%E2%80%93Warshall_algorithm
-
+// TODO wrap in closures, don't pollute global namespace
 
 var assert = require('./assert');
 var grammar = require('./grammar');
+require('./grammar.algorithms')(grammar.Grammar);
 
 var parser = {};
 
@@ -27,11 +28,11 @@ parser.PRODUCEALL = enums.PRODUCEALL;
 var DEBUG = false;
 parser.PRODUCECOUNT = enums.PRODUCETWO;
 
+// TODO this is not the best way of doing this.
 NT = grammar.NT;
 T = grammar.T;
 Rule = grammar.Rule;
 Grammar = grammar.Grammar;
-require('./grammar.algorithms')(grammar.Grammar);
 
 
 // library code, woo

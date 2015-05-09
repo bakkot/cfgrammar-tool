@@ -47,6 +47,14 @@ function Grammar(rules) {
       this.symbolMap[sym] = {rules: []};
       this.symbolsList.push(sym);
     }
+    
+    for(var j=0; j<this.rules[i].production.length; ++j) {
+      var rhsSym = this.rules[i].production[j];
+      if(rhsSym.type == 'NT' && !(rhsSym.data in this.symbolMap)) {
+        this.symbolMap[rhsSym.data] = {rules: []};
+        this.symbolsList.push(rhsSym.data);
+      }
+    }
     this.symbolMap[sym].rules.push(this.rules[i]);
   }
 }
@@ -72,6 +80,16 @@ Grammar.prototype.getReverseMap = function() {
   }
   
   return this._reverseMap;
+}
+
+
+
+
+// TODO this should not be here.
+Grammar.prototype.printRules = function() {
+  for(var i=0; i<this.rules.length; ++i) {
+    console.log(this.rules[i].toString())
+  }
 }
 
 

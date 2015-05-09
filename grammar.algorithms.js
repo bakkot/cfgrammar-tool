@@ -243,7 +243,7 @@ Grammar.prototype.annotateSelfDeriving = function() {
       for(var k=0; k<this.symbolsList.length; ++k) {
         if(derives[this.symbolsList[i]][this.symbolsList[k]] && derives[this.symbolsList[k]][this.symbolsList[j]]) {
           // if i derives k and k derives j then i derives j
-          derives[this.symbolsList[i]][this.symbolsList[j]];
+          derives[this.symbolsList[i]][this.symbolsList[j]] = true;
         }
       }
     }
@@ -305,7 +305,7 @@ Grammar.prototype.strippedUseless = function() {
 // except annotating. if the result is empty, returns {empty: true}.
 Grammar.prototype.strippedUnreachable = function() {
   this.annotateUnreachables();
-  newRules = [];
+  var newRules = [];
   for(var i=0; i<this.rules.length; ++i) {
     var rule = this.rules[i];
     if(!this.symbolMap[rule.name].unreachable) {
@@ -324,25 +324,62 @@ Grammar.prototype.strippedUnreachable = function() {
   return newGrammar;
 }
 
-// returns a copy of the grammar without useless or unreachable symbols.
-// also removes duplicate rules and rules of the form A->A. does not modify the grammar,
-// except annotating. if the result is empty, returns {empty: true}.
-Grammar.prototype.stripped = function() {
-  // useless, then unreachable. not the other way around.
-  var newGrammar = this.strippedUseless();
-  if(newGrammar.empty) return newGrammar;
-  
-  newGrammar = newGrammar.strippedUnreachable();
-  if(newGrammar.empty) return newGrammar;
 
-  assert(newGrammar.annotateUseless().length == 0, 'Suddenly there are more useless symbols?');
-  
+// returns a copy of the grammar with unit productions removed (A -> B) removed.
+// does not modify the grammar. if the result is empty, returns {empty: true}.
+Grammar.prototype.strippedUnitProductions = function() {
   var newRules = [];
-  for(var i=0; i<newGrammar.rules.length; ++i) {
-    var rule = newGrammar.rules[i];
-    if(rule.production.length == 1 && rule.production[0].type == 'NT' && rule.production[0].data == rule.name) {
-      continue; // A -> A
+  
+  var _alreadyRemoved = [];
+  function alreadyRemoved(rule) {
+    for(var i=0; i<_alreadyRemoved.length; ++i) {
+      if(_alreadyRemoved[i].equals(rule)) {
+        return true;
+      }
     }
+    return false;
+  }
+  function markRemoved(rule) {
+    if(!alreadyRemoved(rule)) {
+      _alreadyRemoved.push(rule);
+    }
+  }
+  
+  for(var i=0; i<this.rules.length; ++i) {
+    var rule = this.rules[i];
+    if(rule.production.length !== 1 || rule.production[0].type == 'T') {
+      newRules.push(rule);
+    }
+    else {
+      markRemoved(rule);
+      var sym = rule.production[0].data
+      if(sym !== rule.name) {
+        // rule is A->B
+        for(var j=0; j<this.symbolMap[sym].rules.length; ++j) {
+          var origRule = this.symbolMap[sym].rules[j]; // B->whatever
+          var newRule = Rule(rule.name, origRule.production.slice(0)); // A->whatever
+          if(newRule.production.length !==1 || !alreadyRemoved(newRule)) {
+            newRules.push(newRule);
+          }
+        }
+      }
+    }
+  }
+  
+  if(newRules.length == 0) {
+    return {empty: true};
+  }
+  
+  return Grammar(newRules);
+}
+
+
+// returns a copy of the grammar with duplicate rules removed.
+// does not modify the grammar.
+Grammar.prototype.strippedDuplicates = function() {
+  var newRules = [];
+  for(var i=0; i<this.rules.length; ++i) {
+    var rule = this.rules[i];
     var j;
     for(j=0; j<newRules.length; ++j) {
       if(newRules[j].equals(rule)) {
@@ -353,8 +390,27 @@ Grammar.prototype.stripped = function() {
       newRules.push(rule);
     }
   }
-  
   return Grammar(newRules);
+}
+
+// returns a copy of the grammar without useless or unreachable symbols.
+// also removes duplicate rules and rules of the form A->B. does not modify the grammar,
+// except annotating. if the result is empty, returns {empty: true}.
+Grammar.prototype.stripped = function() {
+  var newGrammar = this.strippedUnitProductions();
+  if(newGrammar.empty) return newGrammar;
+
+  // useless, then unreachable. not the other way around.
+  newGrammar = newGrammar.strippedUseless();
+  if(newGrammar.empty) return newGrammar;
+  
+  newGrammar = newGrammar.strippedUnreachable();
+  if(newGrammar.empty) return newGrammar;
+
+  assert(newGrammar.annotateUseless().length == 0, 'Suddenly there are more useless symbols?');  
+  
+  newGrammar = newGrammar.strippedDuplicates();
+  return newGrammar;
 }
 
 
@@ -431,6 +487,8 @@ Grammar.prototype.deNulled = function() {
   
   newGrammar = newGrammar.stripped();
   newGrammar.makesEpsilon = makesEpsilon;
+  assert(newGrammar.empty || newGrammar.annotateSelfDeriving().length == 0, 'Removing nullables and unit productions did not prevent self-deriving, somehow');
+  
   return newGrammar;
 }
 
