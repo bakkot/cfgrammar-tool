@@ -2,6 +2,7 @@ var parse = require('./parser').parse;
 var subtreePrinter = require('./printers').subtreePrinter;
 var rewritePrinter = require('./printers').rewritePrinter;
 var generator = require('./generate');
+var checks = require('./check');
 
 var grammar3 = Grammar([
   Rule('S', [ NT('T'), T('+'), NT('T')]),
@@ -87,12 +88,12 @@ for(var i=0; i<o.rules.length; ++i) {
 }
 
 
-var parses = parse('aabaaabaaa', grammar1);
+var parses = parse(grammar1, 'aabaaabaaa', );
 for(var i=0; i<parses.length; ++i) {
   rewritePrinter(parses[i]);
 }
 console.log()
-var parses = parse('aabaaabaaa', o);
+var parses = parse(o, 'aabaaabaaa');
 for(var i=0; i<parses.length; ++i) {
   rewritePrinter(parses[i]);
 }
@@ -110,4 +111,15 @@ console.log(f(4));
 
 
 
-// TODO some testing about the proper order to strip things, to make grammar as small as possible.
+var grammar5 = Grammar([
+  Rule('S', [NT('A'), NT('X'), NT('X')]),
+  Rule('A', [NT('A'), NT('A')]),
+  Rule('A', [NT('X')]),
+  Rule('A', []),
+  Rule('X', [T('a')]),
+  Rule('X', [T('b')])
+])
+
+grammar5.deNulled().printRules()
+
+console.log(checks.locatableDifference(grammar5, grammar1.deNulled()))

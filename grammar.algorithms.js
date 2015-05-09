@@ -1,6 +1,6 @@
 var Rule = require('./grammar').Rule;
 var assert = require('./assert');
-// pass in the Grammar constructor and its will be modified to have various algorithms
+// pass in the Grammar constructor and its prototype will be modified to have various algorithms
 module.exports = function(Grammar) {
 
 // modify the grammar so each symbol has a 'nullable' property
@@ -393,6 +393,7 @@ Grammar.prototype.strippedDuplicates = function() {
   return Grammar(newRules);
 }
 
+// TODO some testing about the proper order to strip things, to make grammar as small as possible.
 // returns a copy of the grammar without useless or unreachable symbols.
 // also removes duplicate rules and rules of the form A->B. does not modify the grammar,
 // except annotating. if the result is empty, returns {empty: true}.

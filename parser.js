@@ -95,7 +95,12 @@ State.prototype.toString = function(){
 
 
 
-function parse(str, grammar) { // TODO change order, jeebus
+function parse(grammar, str, produceCount) {
+  var oldProduceCount = parser.PRODUCECOUNT;
+  if(produceCount) {
+    parser.PRODUCECOUNT = produceCount;
+  }
+  
   var chart = [];
   for(var i=0; i<=str.length; ++i) chart.push([]);
   
@@ -203,6 +208,7 @@ function parse(str, grammar) { // TODO change order, jeebus
   if(DEBUG)
     console.log(parses.length);
   
+  parser.PRODUCECOUNT = oldProduceCount;
   return parses;
 }
 
