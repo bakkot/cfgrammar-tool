@@ -101,6 +101,7 @@ for(var i=0; i<parses.length; ++i) {
 */
 
 
+/*
 x = grammar4.deNulled();
 x.printRules()
 console.log(x.annotateSelfDeriving())
@@ -123,3 +124,38 @@ var grammar5 = Grammar([
 grammar5.deNulled().printRules()
 
 console.log(checks.locatableDifference(grammar5, grammar1.deNulled()))
+
+*/
+
+
+
+var grammargrammar = require('./grammar.grammar');
+var ggg = generator(grammargrammar);
+
+
+function makeGrammar() {
+  var x = ggg(Math.round(Math.random()*400) + 40);
+  console.log(x);
+  return eval(x); // eval? yes. eval.
+
+}
+
+console.log()
+var g = makeGrammar();
+g.printRules()
+var g2 = g.deNulled();
+console.log();
+if(!g2.empty) g2.printRules()
+
+
+
+
+
+var foo = Grammar([
+  Rule('D', [NT('C')]),
+  Rule('C', [NT('B')]),
+  Rule('B', [NT('E')]),
+  Rule('E', [NT('D')]),
+  Rule('E', [T('x')])
+]);
+foo.deNulled();

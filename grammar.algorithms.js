@@ -330,37 +330,50 @@ Grammar.prototype.strippedUnreachable = function() {
 Grammar.prototype.strippedUnitProductions = function() {
   var newRules = [];
   
-  var _alreadyRemoved = [];
-  function alreadyRemoved(rule) {
-    for(var i=0; i<_alreadyRemoved.length; ++i) {
-      if(_alreadyRemoved[i].equals(rule)) {
+  var done = [];
+  var queue = [];
+  function seen(rule) {
+    for(var i=0; i<done.length; ++i) {
+      if(done[i].equals(rule)) {
+        return true;
+      }
+    }
+    for(var i=0; i<queue.length; ++i) {
+      if(queue[i].equals(rule)) {
         return true;
       }
     }
     return false;
   }
-  function markRemoved(rule) {
-    if(!alreadyRemoved(rule)) {
-      _alreadyRemoved.push(rule);
+  
+  function enqueue(rule) {
+    if(!seen(rule)) {
+      queue.push(rule);
     }
   }
-  
   for(var i=0; i<this.rules.length; ++i) {
     var rule = this.rules[i];
     if(rule.production.length !== 1 || rule.production[0].type == 'T') {
       newRules.push(rule);
     }
-    else {
-      markRemoved(rule);
-      var sym = rule.production[0].data
-      if(sym !== rule.name) {
-        // rule is A->B
-        for(var j=0; j<this.symbolMap[sym].rules.length; ++j) {
-          var origRule = this.symbolMap[sym].rules[j]; // B->whatever
-          var newRule = Rule(rule.name, origRule.production.slice(0)); // A->whatever
-          if(newRule.production.length !==1 || !alreadyRemoved(newRule)) {
-            newRules.push(newRule);
-          }
+    else { // rule is of the form A->B
+      enqueue(rule);
+    }
+  }
+  
+  while(queue.length > 0) {
+    var rule = queue.pop();
+    done.push(rule);
+    var sym = rule.production[0].data; // everything in the queue is a unit production
+    if(sym !== rule.name) { // rule is not A->A, which can just be ignored
+      for(var j=0; j<this.symbolMap[sym].rules.length; ++j) {
+        var origRule = this.symbolMap[sym].rules[j]; // B->whatever
+        var newRule = Rule(rule.name, origRule.production.slice(0)); // A->whatever
+        if(newRule.production.length !==1 || newRule.production[0].type == 'T') {
+          newRules.push(newRule);
+        }
+        else {
+          enqueue(newRule);
         }
       }
     }
@@ -488,6 +501,9 @@ Grammar.prototype.deNulled = function() {
   
   newGrammar = newGrammar.stripped();
   newGrammar.makesEpsilon = makesEpsilon;
+  
+  
+  //newGrammar.printRules();
   assert(newGrammar.empty || newGrammar.annotateSelfDeriving().length == 0, 'Removing nullables and unit productions did not prevent self-deriving, somehow');
   
   return newGrammar;
