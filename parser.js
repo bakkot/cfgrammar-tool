@@ -4,8 +4,9 @@
 // http://web.stanford.edu/~crwong/cfg/grammar.html
 // http://en.wikipedia.org/wiki/Floyd%E2%80%93Warshall_algorithm
 
-var assert = require('./assert.js');
 
+var assert = require('./assert');
+var grammar = require('./grammar');
 
 var parser = {};
 
@@ -26,13 +27,11 @@ parser.PRODUCEALL = enums.PRODUCEALL;
 var DEBUG = false;
 parser.PRODUCECOUNT = enums.PRODUCETWO;
 
-
-var grammar = require('./grammar.js');
 NT = grammar.NT;
 T = grammar.T;
 Rule = grammar.Rule;
 Grammar = grammar.Grammar;
-require('./grammar.algorithms.js')(grammar.Grammar);
+require('./grammar.algorithms')(grammar.Grammar);
 
 
 // library code, woo
@@ -96,13 +95,13 @@ State.prototype.toString = function(){
 
 
 function parse(str, grammar) { // TODO change order, jeebus
-  var queue = [];
-  for(var i=0; i<=str.length; ++i) queue.push([]);
+  var chart = [];
+  for(var i=0; i<=str.length; ++i) chart.push([]);
   
   function seen(state, strPos) {
     var count = 0;
-    for(var i=0; i<queue[strPos].length; ++i) {
-      var equalness = state.compare(queue[strPos][i]);
+    for(var i=0; i<chart[strPos].length; ++i) {
+      var equalness = state.compare(chart[strPos][i]);
       if(equalness == enums.IDENTICAL || (equalness == enums.SIMILAR && parser.PRODUCECOUNT == enums.PRODUCEONE)) { // either we've seen this exact thing before, or we've seen this modulo different parses and don't care about different parses
         return true;
       }
@@ -119,7 +118,7 @@ function parse(str, grammar) { // TODO change order, jeebus
       newBPs.push(null); // terminals do not need backpointers, of course
       var advanced = State(state.rule, state.index+1, state.predecessor, newBPs);
       if(!seen(advanced, strPos+1)) {
-        queue[strPos+1].push(advanced);
+        chart[strPos+1].push(advanced);
       }
     }
   }
@@ -129,21 +128,21 @@ function parse(str, grammar) { // TODO change order, jeebus
     for(var i=0; i<grammar.symbolMap[sym.data].rules.length; ++i) {
       var advanced = State(grammar.symbolMap[sym.data].rules[i], 0, strPos);
       if(!seen(advanced, strPos)) {
-        queue[strPos].push(advanced);
+        chart[strPos].push(advanced);
       }
     }
     
     // handle silly nullable cornercase: we might need to "re-run" completer for a nullable
     // if we are predicting that nullable but it's already been processed
     // given 'nullable' annotation, we could skip this when 'sym' is not nullable
-    for(var i=0; i<queue[strPos].length; ++i) { // can actually abort when we hit current state, but no real need (todo check speedup)
-      var candidate = queue[strPos][i];
+    for(var i=0; i<chart[strPos].length; ++i) { // can actually abort when we hit current state, but no real need (todo check speedup)
+      var candidate = chart[strPos][i];
       if(candidate.rule.name === sym.data && candidate.predecessor === strPos && candidate.done()) {
         var newBPs = state.backPointers.slice(0);
         newBPs.push(candidate); // 'candidate' is already done
         var advanced = State(state.rule, state.index+1, state.predecessor, newBPs);
         if(!seen(advanced, strPos)) {
-          queue[strPos].push(advanced);
+          chart[strPos].push(advanced);
         }
       }
     }
@@ -151,14 +150,14 @@ function parse(str, grammar) { // TODO change order, jeebus
   
   function completer(state, strPos) {
     var thisSym = NT(state.rule.name);
-    for(var i=0; i<queue[state.predecessor].length; ++i) {
-      var prevState = queue[state.predecessor][i];
+    for(var i=0; i<chart[state.predecessor].length; ++i) {
+      var prevState = chart[state.predecessor][i];
       if(!prevState.done() && thisSym.equals(prevState.next())) {
         var newBPs = prevState.backPointers.slice(0);
         newBPs.push(state); // just finished 'state'
         var advanced = State(prevState.rule, prevState.index+1, prevState.predecessor, newBPs);
         if(!seen(advanced, strPos)) {
-          queue[strPos].push(advanced);
+          chart[strPos].push(advanced);
         }
       }      
     }
@@ -167,13 +166,13 @@ function parse(str, grammar) { // TODO change order, jeebus
   
   var startSym = grammar.start;
   var gammaRule = Rule(['GAMMA'], [NT(startSym)]); // needs a _unique_ identifier. Easiest way: new object
-  queue[0].push(State(gammaRule, 0, 0));
+  chart[0].push(State(gammaRule, 0, 0));
   
   for(var i=0; i<=str.length; ++i) {
     if(DEBUG) console.log('processing position ' + i)
   
-    for(var j=0; j<queue[i].length; ++j) {
-      var state = queue[i][j];
+    for(var j=0; j<chart[i].length; ++j) {
+      var state = chart[i][j];
       if(DEBUG) console.log('state ', state.toString())
       if(!state.done()) {
         if(state.next().type == 'NT') {
@@ -194,8 +193,8 @@ function parse(str, grammar) { // TODO change order, jeebus
 
   // done constructing chart; time to find parses
   var parses = [];
-  for(var i=0; i<queue[str.length].length; ++i) {
-    var state = queue[str.length][i];
+  for(var i=0; i<chart[str.length].length; ++i) {
+    var state = chart[str.length][i];
     if(state.rule === gammaRule && state.done()) {
       parses.push(state);
     }
@@ -207,10 +206,6 @@ function parse(str, grammar) { // TODO change order, jeebus
 }
 
 parser.parse = parse;
-
-
-
-
 
 
 

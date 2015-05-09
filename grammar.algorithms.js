@@ -1,5 +1,5 @@
-var Rule = require('./grammar.js').Rule;
-var assert = require('./assert.js');
+var Rule = require('./grammar').Rule;
+var assert = require('./assert');
 // pass in the Grammar constructor and its will be modified to have various algorithms
 module.exports = function(Grammar) {
 

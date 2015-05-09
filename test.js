@@ -1,6 +1,6 @@
-var parse = require('./parser.js').parse;
-var subtreePrinter = require('./printers.js').subtreePrinter;
-var rewritePrinter = require('./printers.js').rewritePrinter;
+var parse = require('./parser').parse;
+var subtreePrinter = require('./printers').subtreePrinter;
+var rewritePrinter = require('./printers').rewritePrinter;
 
 var grammar = [
   Rule('S', [ NT('T'), T('+'), NT('T')]),
