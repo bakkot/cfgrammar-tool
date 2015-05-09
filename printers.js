@@ -211,7 +211,7 @@ function domPrinter(parse) {
 
 
 module.exports = {
-  subtreePrinter = subtreePrinter,
-  rewritePrinter = rewritePrinter,
-  domPrinter = domPrinter
+  subtreePrinter: subtreePrinter,
+  rewritePrinter: rewritePrinter,
+  domPrinter: domPrinter
 }
