@@ -27,8 +27,17 @@ Rule.prototype.equals = function(other) {
   }
   return true;
 }
-Rule.prototype.toString = function(){
+Rule.prototype.toString = function() {
   return this.name + ' -> ' + this.production.join('');
+}
+Rule.prototype.repr = function() {
+  var out = 'Rule(\'' + this.name + '\', [';
+  for(var i=0; i<this.production.length; ++i) {
+    if(i>0) out += ', ';
+    out += this.production[i].type + '(\'' + this.production[i].data + '\')';
+  }
+  out += '])';
+  return out;
 }
 
 
@@ -59,6 +68,15 @@ function Grammar(rules, start) { // if not given, start is LHS of the first rule
     }
     this.symbolMap[sym].rules.push(this.rules[i]);
   }
+}
+Grammar.prototype.repr = function() { // TODO breaks on single quotes and backslashes, but... don't do that anyway.
+  var out = 'Grammar([\n  ';
+  for(var i=0; i<this.rules.length; ++i) {
+    if(i>0) out += ',\n  ';
+    out += this.rules[i].repr();
+  }
+  out += '\n], \'' + this.start + '\')';
+  return out;
 }
 
 

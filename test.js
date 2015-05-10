@@ -129,7 +129,7 @@ console.log(checks.locatableDifference(grammar5, grammar1.deNulled()))
 */
 
 
-
+/*
 
 var grammargrammar = require('./grammar.grammar');
 var ggg = generator(grammargrammar);
@@ -155,5 +155,10 @@ for(var i=0; i<20; ++i) {
   }
   console.log('\n');
 }
+*/
+
+
+x = grammar2.repr();
+console.log(eval(x).repr() == x)
 
 
