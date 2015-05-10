@@ -275,7 +275,6 @@ Grammar.prototype.strippedUseless = function() {
   this.annotateUseless();
   var newRules = [];
   
-  // first eliminate useless rules. NB: useless, then unreachable. not the other way around.
   for(var i=0; i<this.rules.length; ++i) {
     var rule = this.rules[i];
     if(!this.symbolMap[rule.name].useless) {
@@ -295,7 +294,12 @@ Grammar.prototype.strippedUseless = function() {
     return {empty: true};
   }
   
-  var newGrammar = Grammar(newRules);
+  var newGrammar = Grammar(newRules, this.start);
+  if(newGrammar.symbolMap[newGrammar.start].rules.length === 0) {
+    return {empty: true}; // nowhere to go: empty.
+  }
+  
+  
   assert(newGrammar.annotateUseless().length == 0, 'Haven\'t actually eliminated all useless productions?');
   
   return newGrammar;
@@ -318,7 +322,10 @@ Grammar.prototype.strippedUnreachable = function() {
     return {empty: true};
   }
   
-  var newGrammar = Grammar(newRules);
+  var newGrammar = Grammar(newRules, this.start);
+  if(newGrammar.symbolMap[newGrammar.start].rules.length === 0) {
+    return {empty: true}; // nowhere to go: empty.
+  }
   assert(newGrammar.annotateUnreachables().length == 0, 'Haven\'t actually eliminated all unreachable productions?');
   
   return newGrammar;
@@ -383,7 +390,7 @@ Grammar.prototype.strippedUnitProductions = function() {
     return {empty: true};
   }
   
-  return Grammar(newRules);
+  return Grammar(newRules, this.start); // I'm... pretty sure this is correct.
 }
 
 
@@ -403,7 +410,7 @@ Grammar.prototype.strippedDuplicates = function() {
       newRules.push(rule);
     }
   }
-  return Grammar(newRules);
+  return Grammar(newRules, this.start);
 }
 
 // TODO some testing about the proper order to strip things, to make grammar as small as possible.
@@ -496,7 +503,7 @@ Grammar.prototype.deNulled = function() {
     return {empty: true, makesEpsilon: makesEpsilon};
   }
   
-  newGrammar = Grammar(newRules);
+  newGrammar = Grammar(newRules, newGrammar.start);
   assert(newGrammar.annotateNullables().length == 0, 'Having removed nullables, there are still nullables.');
   
   newGrammar = newGrammar.stripped();

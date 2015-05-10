@@ -96,6 +96,7 @@ State.prototype.toString = function(){
 
 
 function parse(grammar, str, produceCount) {
+  if(typeof str !== 'string') throw Error('Can\'t parse non-string object ' + (typeof str));
   var oldProduceCount = parser.PRODUCECOUNT;
   if(produceCount) {
     parser.PRODUCECOUNT = produceCount;

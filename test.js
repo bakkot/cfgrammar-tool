@@ -1,4 +1,5 @@
-var parse = require('./parser').parse;
+var parser = require('./parser');
+var parse = parser.parse;
 var subtreePrinter = require('./printers').subtreePrinter;
 var rewritePrinter = require('./printers').rewritePrinter;
 var generator = require('./generate');
@@ -129,6 +130,7 @@ console.log(checks.locatableDifference(grammar5, grammar1.deNulled()))
 
 
 
+
 var grammargrammar = require('./grammar.grammar');
 var ggg = generator(grammargrammar);
 
@@ -140,22 +142,18 @@ function makeGrammar() {
 
 }
 
-console.log()
-var g = makeGrammar();
-g.printRules()
-var g2 = g.deNulled();
-console.log();
-if(!g2.empty) g2.printRules()
 
 
+for(var i=0; i<20; ++i) {
+  console.log(i);
+  var g = makeGrammar();
+  //console.log(g);
+  var w = checks.locatableDifference(g, g, 4, 20);
+  if(w) {
+    console.log(w);
+    process.exit();
+  }
+  console.log('\n');
+}
 
 
-
-var foo = Grammar([
-  Rule('D', [NT('C')]),
-  Rule('C', [NT('B')]),
-  Rule('B', [NT('E')]),
-  Rule('E', [NT('D')]),
-  Rule('E', [T('x')])
-]);
-foo.deNulled();

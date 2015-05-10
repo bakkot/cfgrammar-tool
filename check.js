@@ -57,7 +57,7 @@ function locatableDifference(A, B, count, length) {
       
       b = genB(n);
       if(parser.parse(A, b).length !== 1) {
-        return witness(b, true);
+        return witness(b, false);
       }
     }
   }

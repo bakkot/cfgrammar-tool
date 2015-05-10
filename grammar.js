@@ -34,12 +34,14 @@ Rule.prototype.toString = function(){
 
 
 
-function Grammar(rules) {
-  if(!(this instanceof Grammar)) return new Grammar(rules);
+function Grammar(rules, start) { // if not given, start is LHS of the first rule.
+  if(!(this instanceof Grammar)) return new Grammar(rules, start);
   this.rules = rules;
-  this.start = rules[0].name;
+  this.start = start || rules[0].name;
   this.symbolMap = {}; // initially just rules for each symbol; eventually can contain annotations like 'nullable'
-  this.symbolsList = [];
+  this.symbolsList = start?[start]:[];
+  
+  if(start) this.symbolMap[start] = {rules: []};
   
   for(var i=0; i<this.rules.length; ++i) {
     var sym = this.rules[i].name;

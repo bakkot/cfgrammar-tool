@@ -27,7 +27,7 @@ function choose(l, foo) {
 
 function generator(grammar) {
   grammar = grammar.deNulled();
-  if(grammar.annotateSelfDeriving().length > 0) {
+  if(!grammar.empty && grammar.annotateSelfDeriving().length > 0) {
     throw Error('Generator does not work when there are infinitely many parses for a string. (ie, when A*=>A.)');
   }
 
