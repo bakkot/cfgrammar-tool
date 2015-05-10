@@ -7,7 +7,7 @@ var generator = require('./generate');
 // If it finds a string s which is accepted by one but not the other,
 // returns {string: s, acceptedByFirst: boolean} (acceptedByFirst is true if A accepts
 // and B rejects, false if A rejects and B accepts. In other cases s is not a witness
-// to A and B being different.
+// to A and B being different.)
 // If no witness is found, returns false. (So you can use this in an `if` if you don't
 // care what the witness is.)
 // 'count' and 'length' are optional parameters specifying how many strings at each

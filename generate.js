@@ -144,6 +144,31 @@ function generator(grammar) {
     return g(grammar.start, n);
   }
   
+  // determine if there are any strings in the grammar of length in [start, start+range)
+  // returns such an n, if one exists, or -1 if none exist, or -2 if the language is {''},
+  // or -3 if the language is the empty set.
+  // by default, start=0, range=10
+  generate.findLength = function(start, range) {
+    if(grammar.empty) {
+      return grammar.makesEpsilon?-2:-3;
+    }
+    start = start || 0;
+    range = range || 10;
+
+    if(start == 0 && grammar.makesEpsilon) {
+      return 0;
+    }
+
+    for(var n=start; n<start+range; ++n) {
+      if(choose(f(grammar.start, n)) !== -1) {
+        return n;
+      }
+    }
+    
+    return -1;
+  }
+  
+  
   return generate;
 }
 

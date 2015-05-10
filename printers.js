@@ -69,6 +69,29 @@ function rewritePrinter(parse) {
 
 
 
+// Helper for domRule and domGrammar
+// Returns a span representing a RHS.
+function domProduction(production) {
+  var o = document.createElement('span');
+  if(production.length == 0) {
+    o.appendChild(document.createTextNode('\u025B')); // epsilon
+  }
+  else {
+    for(var i=0; i<production.length; ++i) {
+      if(production[i].type == 'T') {
+        o.appendChild(document.createTextNode(production[i].data));
+      }
+      else {
+        var sp = document.createElement('span');
+        sp.className = 'cfg-symbol';
+        sp.appendChild(document.createTextNode(production[i].data));
+        o.appendChild(sp);
+      }
+    }
+  }
+  return o;
+}
+
 // helper for domPrinter
 // create a DOM node representing the rule. obviously only call in browsers.
 // symbols get class cfg-symbol, the rule itself class cfg-rule.
@@ -82,23 +105,8 @@ function domRule(rule) {
   o.appendChild(sp);
   o.appendChild(document.createTextNode(' \u2192 ')); // right arrow
   
-  if(rule.production.length == 0) {
-    o.appendChild(document.createTextNode('\u025B')); // epsilon
-  }
-  else {
-    for(var i=0; i<rule.production.length; ++i) {
-      if(rule.production[i].type == 'T') {
-        o.appendChild(document.createTextNode(rule.production[i].data));
-      }
-      else {
-        sp = document.createElement('span');
-        sp.className = 'cfg-symbol';
-        sp.appendChild(document.createTextNode(rule.production[i].data));
-        o.appendChild(sp);
-      }
-    }
-  }
-  
+  o.appendChild(domProduction(rule.production));
+    
   return o;
 }
 
@@ -135,12 +143,9 @@ function domPrinter(parse) {
     return o;
   }
 
-
   var out = document.createElement('table');
   out.className = 'cfg-derivations derivations'; // TODO second is for compat
   out.innerHTML = '<thead><tr><th>Rule</th><th>Application</th><th>Result</th></tr></thead>';
-  
-  
   
   
   // handle GAMMA state specially
@@ -209,9 +214,47 @@ function domPrinter(parse) {
 
 
 
+function escapeHTML(str) {
+  // not my preferred solution, but whatever.
+  var div = document.createElement('div');
+  div.appendChild(document.createTextNode(str));
+  return div.innerHTML;
+}
+
+// create a DOM div representing the entire parse. obviously only call in browsers.
+function domGrammarPrinter(grammar) {
+  var o = document.createElement('div');
+  var line = document.createElement('span');
+  line.innerHTML = 'Start symbol: <span class="cfg-symbol">' + escapeHTML(grammar.start) + '</span>';
+  o.appendChild(line);
+  o.appendChild(document.createElement('br'));
+  
+  for(var i=0; i<grammar.symbolsList.length; ++i) {
+    var sym = grammar.symbolsList[i];
+    line = document.createElement('span');
+    var sp = document.createElement('span');
+    sp.className = 'cfg-symbol';
+    sp.appendChild(document.createTextNode(sym));
+    line.appendChild(sp);
+    line.appendChild(document.createTextNode(' \u2192 '));
+    for(var j=0; j<grammar.symbolMap[sym].rules.length; ++j) {
+      if(j > 0) {
+        line.appendChild(document.createTextNode(' | '));
+      }
+      var rule = grammar.symbolMap[sym].rules[j];
+      line.appendChild(domProduction(rule.production));
+    }
+    o.appendChild(line);
+    o.appendChild(document.createElement('br'));
+  }
+  
+  return o;
+}
+
 
 module.exports = {
   subtreePrinter: subtreePrinter,
   rewritePrinter: rewritePrinter,
-  domPrinter: domPrinter
+  domPrinter: domPrinter,
+  domGrammarPrinter: domGrammarPrinter
 }
