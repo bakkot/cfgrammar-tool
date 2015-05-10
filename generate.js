@@ -144,6 +144,7 @@ function generator(grammar) {
     return g(grammar.start, n);
   }
   
+  // TODO probably get rid of this.
   // determine if there are any strings in the grammar of length in [start, start+range)
   // returns such an n, if one exists, or -1 if none exist, or -2 if the language is {''},
   // or -3 if the language is the empty set.
@@ -168,6 +169,37 @@ function generator(grammar) {
     return -1;
   }
   
+  // In the range [start, start+range), which lengths are possible?
+  // Returns null if the grammar is empty.
+  // TODO could also tell people when the only possibility is the empty string...
+  generate.findLengths = function(start, range) {
+    start = start || 0;
+    range = range || 10;
+    if(grammar.empty) {
+      if(!grammar.makesEpsilon) {
+        return null;
+      }
+      else {
+        return start == 0 ? [0]:[];
+      }
+    }
+    
+    var lengths = [];
+    if(start == 0) {
+      if(grammar.makesEpsilon) {
+        lengths.push(0);
+      }
+      start = 1;
+    }
+    
+    for(var length = start; length<start+range; ++length) {
+      if(choose(f(grammar.start, length)) !== -1) {
+        lengths.push(length);
+      }
+    }
+    
+    return lengths;
+  }
   
   return generate;
 }
