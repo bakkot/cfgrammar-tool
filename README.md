@@ -40,7 +40,7 @@ parser.parse(exprGrammar, 'n*(n+n)').length > 0; // true
 parser.parse(exprGrammar, 'n*n n*n').length > 0; // false
 
 var generator = generatorFactory(exprGrammar);
-generator(11); // something like 'n*((n+(n)*n+n+n*n))*n'
+generator(21); // something like 'n*((n+(n)*n+n+n*n))*n'
 ```
 
 TODO
