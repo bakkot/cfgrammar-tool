@@ -1,7 +1,7 @@
 CFGrammar-Tool
 ==============
 
-A JavaScript library for working with [context-free grammars](http://en.wikipedia.org/wiki/Context-free_grammar). It's on its way to being a node.js module, but it's not quite there yet; still, you can probably use it as one.
+A JavaScript library for working with [context-free grammars](http://en.wikipedia.org/wiki/Context-free_grammar). It's also a node.js module (`npm install cfgrammar-tool`).
 
 
 Features
