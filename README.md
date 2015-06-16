@@ -19,9 +19,10 @@ Example
 -------
 
 ```javascript
-var types = require('./grammar');
-var parser = require('./parser');
-var generatorFactory = require('./generate');
+var cfgtool = require('cfgrammar-tool');
+var types = cfgtool.types;
+var parser = cfgtool.parser;
+var generatorFactory = cfgtool.generator;
 
 var Grammar = types.Grammar;
 var Rule = types.Rule;
@@ -46,7 +47,7 @@ generator(21); // something like 'n*((n+(n)*n+n+n*n))*n'
 TODO
 ----
 
-* Proper NPM support and general code cleanup; this was mostly written in a couple of marathon sessions to try to get a tool based on it up, and the haste shows. Strict mode and linting, too.
+* General code cleanup; this was mostly written in a couple of marathon sessions to try to get a tool based on it up, and the haste shows. Strict mode and linting, too.
 
 * Normal forms: put a grammar in [Chomsky normal form](http://en.wikipedia.org/wiki/Chomsky_normal_form), [Greibach normal form](http://en.wikipedia.org/wiki/Greibach_normal_form), or others.
 
