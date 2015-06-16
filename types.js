@@ -46,7 +46,7 @@ Rule.prototype.repr = function() {
 function Grammar(rules, start) { // if not given, start is LHS of the first rule.
   if(!(this instanceof Grammar)) return new Grammar(rules, start);
   this.rules = rules;
-  this.start = start || rules[0].name;
+  this.start = start || rules[0].name; // TODO warn
   this.symbolMap = {}; // initially just rules for each symbol; eventually can contain annotations like 'nullable'
   this.symbolsList = start?[start]:[];
   
@@ -102,15 +102,6 @@ Grammar.prototype.getReverseMap = function() {
   return this._reverseMap;
 }
 
-
-
-
-// TODO this should not be here.
-Grammar.prototype.printRules = function() {
-  for(var i=0; i<this.rules.length; ++i) {
-    console.log(this.rules[i].toString())
-  }
-}
 
 
 module.exports = {

@@ -3,11 +3,11 @@
 // https://a2c2a.wordpress.com/2014/09/18/implementing-an-earley-parser-that-handles-nullable-grammars-and-draws-all-unique-parse-trees-in-python/
 // http://web.stanford.edu/~crwong/cfg/grammar.html
 // http://en.wikipedia.org/wiki/Floyd%E2%80%93Warshall_algorithm
-// TODO wrap in closures, don't pollute global namespace
+
 
 var assert = require('./assert');
-var grammar = require('./grammar');
-require('./grammar.algorithms')(grammar.Grammar);
+var types = require('./types');
+require('./algorithms')(types.Grammar);
 
 var parser = {};
 
@@ -25,14 +25,13 @@ parser.PRODUCEALL = enums.PRODUCEALL;
 
 
 
-var DEBUG = false;
 parser.PRODUCECOUNT = enums.PRODUCETWO;
 
 // TODO this is not the best way of doing this.
-NT = grammar.NT;
-T = grammar.T;
-Rule = grammar.Rule;
-Grammar = grammar.Grammar;
+NT = types.NT;
+T = types.T;
+Rule = types.Rule;
+Grammar = types.Grammar;
 
 
 // library code, woo
@@ -49,21 +48,25 @@ function arraysEqual(a, b) {
 
 
 
-
-if(DEBUG) {
-  var _id = 0;
-  function id(){
-    return ++_id;
-  }
-}
-
+// a State in an Earley parse is a tuple (rule, index, predecessor, backPointers)
+// Conceptually, a State is a possibly-partial sub-parse of some part of the string.
+// 'rule' is the rule which this state is a (possibly partial) parse of
+// 'index' is how far along in the rule's production this state is
+// 'predecessor' is the index in the string-being-parsed at which this rule began
+// 'backPointers' is the children of this rule, essentially: that is,
+//   when index > 0, index has been pushed along by a series of sub-parses completing,
+//   each sub-parse representing a terminal or nonterminal in this rule's production.
+//   backPointers is an array containing those completed sub-parses/States.
+//   in particular, backPointers[i] is the State object corresponding to
+//   rule.production[i] (or null if said production is a terminal).
+// TODO rename backPointers, do away with index
+// TODO have 'c' instead of null for terminals in backPointers
 function State(rule, index, predecessor, backPointers) {
   if(!(this instanceof State)) return new State(rule, index, predecessor, backPointers);
   this.rule = rule;
   this.index = index;
   this.predecessor = predecessor;
   this.backPointers = backPointers || [];
-  if(DEBUG) this.id = id();
   assert(this.index == this.backPointers.length); // honestly could just do away with index at this point
 }
 State.prototype.done = function(){ return this.index === this.rule.production.length; }
@@ -84,9 +87,8 @@ State.prototype.compare = function(other) {
 }
 State.prototype.next = function(){ return this.rule.production[this.index]; } 
 State.prototype.toString = function(){
-  return '(' + (DEBUG?(this.id.toString() + ' '):'') + this.rule.name + ' -> ' + this.rule.production.slice(0, this.index).join('')
-          + '*' + this.rule.production.slice(this.index).join('') + ', ' + this.predecessor.toString() 
-          + (DEBUG?(', [' + this.backPointers.map(function(x){return x===null?'null':x.id.toString();}).join(',') + ']'):'') + ')';
+  return '(' + this.rule.name + ' -> ' + this.rule.production.slice(0, this.index).join('')
+          + '*' + this.rule.production.slice(this.index).join('') + ', ' + this.predecessor.toString() + ')';
 }
 
 
@@ -170,29 +172,28 @@ function parse(grammar, str, produceCount) {
     }
   }
   
+
+  if(parser.PRODUCECOUNT == enums.PRODUCEALL && grammar.annotateSelfDeriving().length !== 0) {
+    throw Error('Asked for all parses, but grammar can produce infinitely many parses for some string. Check grammar.annotateSelfDeriving() for specifics.');
+  }
+    
   
   var startSym = grammar.start;
   var gammaRule = Rule(['GAMMA'], [NT(startSym)]); // needs a _unique_ identifier. Easiest way: new object
   chart[0].push(State(gammaRule, 0, 0));
   
   for(var i=0; i<=str.length; ++i) {
-    if(DEBUG) console.log('processing position ' + i)
-  
     for(var j=0; j<chart[i].length; ++j) {
       var state = chart[i][j];
-      if(DEBUG) console.log('state ', state.toString())
       if(!state.done()) {
         if(state.next().type == 'NT') {
-          if(DEBUG) console.log('p')
           predictor(state, i);
         }
         else {
-          if(DEBUG) console.log('s', state.next())
           scanner(state, i);
         }
       }
       else {
-        if(DEBUG) console.log('c')
         completer(state, i);
       }
     }
@@ -206,8 +207,6 @@ function parse(grammar, str, produceCount) {
       parses.push(state);
     }
   }
-  if(DEBUG)
-    console.log(parses.length);
   
   parser.PRODUCECOUNT = oldProduceCount;
   return parses;

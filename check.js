@@ -32,7 +32,7 @@ function locatableDifference(A, B, count, length) {
   var genA = generator(A);
   var genB = generator(B);
   
-  for(var n=8; n<length; ++n) {
+  for(var n=0; n<length; ++n) {
     // first, check that they both either do or do not produce any strings of this length
     var a = genA(n);
     var b = genB(n);
@@ -67,6 +67,4 @@ function locatableDifference(A, B, count, length) {
 }
 
 
-module.exports = {
-  locatableDifference: locatableDifference
-}
+module.exports.locatableDifference = locatableDifference;

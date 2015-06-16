@@ -10,9 +10,8 @@ function sum(l) {
   return out;
 }
 
-function choose(l, foo) {
+function choose(l) {
   var total = sum(l);
-  //console.log(l, total, foo);
   if(total == 0) return -1; // no valid options
   var r = Math.random();
   for(var i=0; i<l.length; ++i) {
@@ -20,15 +19,15 @@ function choose(l, foo) {
     if(r < t) return i;
     r -= t;
   }
-  console.log('AThis shouldn\'t really happen.', r);
+  console.log('No choices? This shouldn\'t really happen.', r);
   return l.length-1;
 }
 
 
-function generator(grammar) {
+function generatorFactory(grammar) {
   grammar = grammar.deNulled();
   if(!grammar.empty && grammar.annotateSelfDeriving().length > 0) {
-    throw Error('Generator does not work when there are infinitely many parses for a string. (ie, when A*=>A.)');
+    throw Error('Generator does not work when there are infinitely many parses for a string. (ie, when A*=>A is possible.)');
   }
 
 
@@ -126,7 +125,7 @@ function generator(grammar) {
         return g(x.data, n);
       }
       else {
-        var l = choose(fprime(sym, j, k, n), 'be defined'); // paper has i, i, k, n. pretty sure that's a typo
+        var l = choose(fprime(sym, j, k, n)); // paper has i, i, k, n. pretty sure that's a typo
         assert(l !== -1, "Couldn't find a valid choice.");
         return g(x.data, l+1) + gprime(sym, j, k+1, n-(l+1)); // l is a length, not an index
       }
@@ -205,4 +204,4 @@ function generator(grammar) {
 }
 
 
-module.exports = generator;
+module.exports = generatorFactory;

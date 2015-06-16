@@ -10,7 +10,7 @@ Features
 * Parsing. The implementation is [Earley's algorithm](http://en.wikipedia.org/wiki/Earley_parser), so arbitrary CFGs are supported without transformation. Optionally keep track of two parses or all parses, so as to catch ambiguity. Note that tracking all parses can take exponential or infinite time (though the latter possibility can be detected in advance).
 
 * Generation. Given a grammar, generate a string of length *n* in its language. All such strings are generated with non-zero probability, and if the grammar is unambiguous and does not contain nullable nonterminals then strings are generated uniformly at random. Requires *n*^2 preprocessing time, then linear time for each string.
- - Useful for automatic testing when QuickCheck and its ilk aren't generating sufficiently structured data. For example, `grammar.grammar.js` contains a CFG for CFGs, which was used to automatically test this very application. 
+ - Useful for automatic testing when QuickCheck and its ilk aren't generating sufficiently structured data. For example, `test.js` contains a CFG for CFGs, which was used to automatically test this very application. 
 
 * Diagnostics and manipulation. Find/remove unreachable symbols, symbols which do not generate any string, nullable symbols, duplicate rules, unit productions (A -> B), etc.
 
@@ -37,7 +37,7 @@ var exprGrammar = Grammar([
 ]);
 
 parser.parse(exprGrammar, 'n*(n+n)').length > 0; // true
-parser.parse(exprGrammar, 'n*n n*n').length > 0; // false
+parser.parse(exprGrammar, 'n(n+n)').length > 0; // false
 
 var generator = generatorFactory(exprGrammar);
 generator(21); // something like 'n*((n+(n)*n+n+n*n))*n'
