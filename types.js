@@ -12,6 +12,10 @@ Sym.prototype.toString = function(){
 function NT(data) { return new Sym('NT', data); }
 function T(data) { return new Sym('T', data); }
 
+function reprEscape(str) { // does not handle unicode or exceptional cases properly.
+  return str.replace(/['\\]/g, function(c) { return '\\' + c; })
+    .replace(/\n/g, '\\n').replace(/\r/g, '\\r');
+}
 
 function Rule(name, production) {
   if(!(this instanceof Rule)) return new Rule(name, production);
@@ -31,10 +35,10 @@ Rule.prototype.toString = function() {
   return this.name + ' -> ' + this.production.join('');
 }
 Rule.prototype.repr = function() {
-  var out = 'Rule(\'' + this.name + '\', [';
+  var out = 'Rule(\'' + reprEscape(this.name) + '\', [';
   for(var i=0; i<this.production.length; ++i) {
     if(i>0) out += ', ';
-    out += this.production[i].type + '(\'' + this.production[i].data + '\')';
+    out += this.production[i].type + '(\'' + reprEscape(this.production[i].data) + '\')';
   }
   out += '])';
   return out;
@@ -69,13 +73,13 @@ function Grammar(rules, start) { // if not given, start is LHS of the first rule
     this.symbolMap[sym].rules.push(this.rules[i]);
   }
 }
-Grammar.prototype.repr = function() { // TODO breaks on single quotes and backslashes, but... don't do that anyway.
+Grammar.prototype.repr = function() {
   var out = 'Grammar([\n  ';
   for(var i=0; i<this.rules.length; ++i) {
     if(i>0) out += ',\n  ';
     out += this.rules[i].repr();
   }
-  out += '\n], \'' + this.start + '\')';
+  out += '\n], \'' + reprEscape(this.start) + '\')';
   return out;
 }
 
