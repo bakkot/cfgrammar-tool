@@ -8,11 +8,12 @@ var checks = require('./check');
 var assert = require('./assert');
 var parser = require('./parser');
 var subtreePrinter = require('./printers').subtreePrinter;
+var astPrinter = require('./printers').astPrinter;
 
 
 
 
-// Arithmetic expressions on 0-9 (with precedence). Demonstrates one way to use a parse.
+// Arithmetic expressions on 0-9 (with precedence). Demonstrates two ways to evaluate a parse.
 
 var plus = Rule('E', [NT('E'), T('+'), NT('T')]);
 var term = Rule('E', [NT('T')]);
@@ -44,7 +45,7 @@ var mathGrammar = Grammar([
   Rule('N', [T('9')])]
 );
 
-
+// You can treat the parse tree as a very complex AST and evaluate directly, as follows:
 plus.eval = function(state) { return mathEval(state.backPointers[0]) + mathEval(state.backPointers[2]); }
 times.eval = function(state) { return mathEval(state.backPointers[0]) * mathEval(state.backPointers[2]); }
 neg.eval = function(state) { return -mathEval(state.backPointers[1]); }
@@ -61,6 +62,39 @@ function mathEval(state) {
   }
 }
 
+// Or you can use the astPrinter to get a sane AST, and then evaluate that.
+function toMathAst(parse) {
+  return astPrinter(parse, true, function(rule) { // the function is a map from rules to the name of the corresponding node
+    switch(rule) {
+      case plus:
+        return 'Plus';
+      case times:
+        return 'Times';
+      case neg:
+        return 'Negation';
+      case paren:
+        return 'Paren';
+      default:
+        return 'Unknown';
+    }
+  });
+}
+
+function mathAstEval(ast) {
+  switch(ast.type) {
+    case 'Plus':
+      return mathAstEval(ast.children[0]) + mathAstEval(ast.children[2]);
+    case 'Times':
+      return mathAstEval(ast.children[0]) * mathAstEval(ast.children[2]);
+    case 'Negation':
+      return -mathAstEval(ast.children[1]);
+    case 'Paren':
+      return mathAstEval(ast.children[1]);
+    case 'Terminal':
+      return +ast.value;
+  }
+}
+
 
 var mathGenerator = generator(mathGrammar);
 
@@ -69,15 +103,16 @@ for(var i=0; i<10; ++i) {
   var expr = mathGenerator(Math.round(Math.random()*40) + 1);
   var res = parser.parse(mathGrammar, expr, parser.PRODUCEALL);
   assert(res.length == 1, 'mathGrammar is ambiguous?');
+  
   var grammarVal = mathEval(res[0]);
   var jsVal = eval(expr);
-  assert(grammarVal == jsVal || (isNaN(grammarVal) && isNaN(jsVal)), 'JS disagrees with our evaluation.')
+  assert(grammarVal === jsVal || (isNaN(grammarVal) && isNaN(jsVal)), 'JS disagrees with our evaluation.');
+  
+  var ast = toMathAst(res[0]);
+  var astVal = mathAstEval(ast);
+  assert(jsVal === astVal || (isNaN(astVal) && isNaN(astVal)), 'JS disagrees with the AST evaluation.');
 }
 console.log('Passed.');
-
-
-
-
 
 
 

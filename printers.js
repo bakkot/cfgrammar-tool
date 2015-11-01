@@ -67,6 +67,34 @@ function rewritePrinter(parse) {
 }
 
 
+// todo 'discardImplicitTerminals': if a production contains both terminals and nonterminals, children does not contain the terminals? useful for 'negation', parentheses
+function astPrinter(parse, collapseUnitProductions, ruleRenamingFunction) {
+  // collapseUnitProductions defaults to false. If true, rules of the form X->Y will not generate an additional level in the AST.
+  // ruleRenamingFunction should be a function from Rules in the grammar to names of rules (e.g. strings), which will then be used as the 'type' of nodes. If not present, 'type' will be the Rule itself.
+  // Non-terminals in the resulting AST have 'type' and 'children' properties, with 'children' being an array. Terminals have type 'Terminal' and a 'value' property containing their value.
+  
+  var rename = typeof ruleRenamingFunction === 'function';
+  
+  function backPointerToSubtree(bp) {
+    var tree = {
+      type: rename ? ruleRenamingFunction(bp.rule) : bp.rule,
+      children: []
+    }
+    for (var i = 0; i<bp.backPointers.length; ++i) {
+      var current = bp.backPointers[i];
+      if (current === null) {
+        tree.children.push({
+          type: 'Terminal',
+          value: bp.rule.production[i].data
+        });
+      } else {
+        tree.children.push(backPointerToSubtree(current));
+      }
+    }
+    return (collapseUnitProductions && tree.children.length === 1) ? tree.children[0] : tree; // TODO instead just do not generate the tree node at all
+  }
+  return backPointerToSubtree(parse.backPointers[0]);
+}
 
 
 // Helper for domRule and domGrammar
@@ -255,6 +283,7 @@ function domGrammarPrinter(grammar) {
 module.exports = {
   subtreePrinter: subtreePrinter,
   rewritePrinter: rewritePrinter,
+  astPrinter: astPrinter,
   domPrinter: domPrinter,
   domGrammarPrinter: domGrammarPrinter
 }
