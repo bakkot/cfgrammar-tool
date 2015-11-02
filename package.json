@@ -1,6 +1,6 @@
 {
   "name": "cfgrammar-tool",
-  "version": "0.1.1",
+  "version": "0.2.0",
   "description": "Work with context-free grammars. Parsing, string generation, and manipulation.",
   "main": "index.js",
   "scripts": {
