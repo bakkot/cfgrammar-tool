@@ -64,7 +64,7 @@ function mathEval(state) {
 
 // Or you can use the astPrinter to get a sane AST, and then evaluate that.
 function toMathAst(parse) {
-  return astPrinter(parse, true, function(rule) { // the function is a map from rules to the name of the corresponding node
+  return astPrinter(parse, true, true, function(rule) { // the function is a map from rules to the name of the corresponding node
     switch(rule) {
       case plus:
         return 'Plus';
@@ -83,13 +83,13 @@ function toMathAst(parse) {
 function mathAstEval(ast) {
   switch(ast.type) {
     case 'Plus':
-      return mathAstEval(ast.children[0]) + mathAstEval(ast.children[2]);
+      return mathAstEval(ast.children[0]) + mathAstEval(ast.children[1]);
     case 'Times':
-      return mathAstEval(ast.children[0]) * mathAstEval(ast.children[2]);
+      return mathAstEval(ast.children[0]) * mathAstEval(ast.children[1]);
     case 'Negation':
-      return -mathAstEval(ast.children[1]);
+      return -mathAstEval(ast.children[0]);
     case 'Paren':
-      return mathAstEval(ast.children[1]);
+      return mathAstEval(ast.children[0]);
     case 'Terminal':
       return +ast.value;
   }
@@ -110,7 +110,7 @@ for(var i=0; i<10; ++i) {
   
   var ast = toMathAst(res[0]);
   var astVal = mathAstEval(ast);
-  assert(jsVal === astVal || (isNaN(astVal) && isNaN(astVal)), 'JS disagrees with the AST evaluation.');
+  assert(jsVal === astVal || (isNaN(jsVal) && isNaN(astVal)), 'JS disagrees with the AST evaluation.');
 }
 console.log('Passed.');
 
