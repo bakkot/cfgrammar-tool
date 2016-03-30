@@ -8,15 +8,17 @@ var generator = require('./generate');
 // returns {string: s, acceptedByFirst: boolean} (acceptedByFirst is true if A accepts
 // and B rejects, false if A rejects and B accepts. In other cases s is not a witness
 // to A and B being different.)
-// If no witness is found, returns false. (So you can use this in an `if` if you don't
+// If no witness is found, returns null. (So you can use this in an `if` if you don't
 // care what the witness is.)
 // 'count' and 'length' are optional parameters specifying how many strings at each
 // length to check and the maximum length of strings to check respectively.
 // Default count is 10 and length is 20.
+// If 'deterministic' is true, the RNG used will be deterministic.
+// If 'skipAsserts' is true, will not bother checking that generated strings are parsed. TODO don't both with asserts at all.
 // Ends up wasting some time generating duplicates at low lengths, but whatever.
 // TODO: for efficiency, should use the ftables from generator to limit how count at
 // a given length
-function locatableDifference(A, B, count, length) {
+function locatableDifference(A, B, count, length, deterministic, skipAsserts) {
   count = count || 10;
   length = length || 20;
   if(length < 0 || count < 1) return false;
@@ -29,8 +31,8 @@ function locatableDifference(A, B, count, length) {
     return {string: s, acceptedByFirst: which};
   }
   
-  var genA = generator(A);
-  var genB = generator(B);
+  var genA = generator(A, deterministic);
+  var genB = generator(B, deterministic);
   
   for(var n=0; n<length; ++n) {
     // first, check that they both either do or do not produce any strings of this length
@@ -40,11 +42,11 @@ function locatableDifference(A, B, count, length) {
       continue; // not gonna get any strings; move on.
     }
     else if(a !== null && b === null) {
-      assert(parser.parse(A, a).length === 1, 'Generated a string "' + a + '" which did not parse.');
+      if(!skipAsserts) assert(parser.parse(A, a).length === 1, 'Generated a string "' + a + '" which did not parse.');
       return witness(a, true);
     }
     else if(a === null && b !== null) {
-      assert(parser.parse(B, b).length === 1, 'Generated a string "' + b + '" which did not parse.');
+      if(!skipAsserts) assert(parser.parse(B, b).length === 1, 'Generated a string "' + b + '" which did not parse.');
       return witness(b, false);
     }
     // ok, at least some strings in each.
@@ -63,7 +65,7 @@ function locatableDifference(A, B, count, length) {
   }
   
   parser.PRODUCECOUNT = oldProduceCount;
-  return false;
+  return null;
 }
 
 

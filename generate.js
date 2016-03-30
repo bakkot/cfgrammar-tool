@@ -10,10 +10,9 @@ function sum(l) {
   return out;
 }
 
-function choose(l) {
+function choose(l, r) { // choose an entry from a list at random. should be passed a random number.
   var total = sum(l);
   if(total == 0) return -1; // no valid options
-  var r = Math.random();
   for(var i=0; i<l.length; ++i) {
     var t = l[i]/total;
     if(r < t) return i;
@@ -24,12 +23,25 @@ function choose(l) {
 }
 
 
-function generatorFactory(grammar) {
+function generatorFactory(grammar, deterministic) {
   grammar = grammar.deNulled();
   if(!grammar.empty && grammar.annotateSelfDeriving().length > 0) {
     throw Error('Generator does not work when there are infinitely many parses for a string. (ie, when A*=>A is possible.)');
   }
-
+  
+  var rand = !deterministic ? Math.random : (function() {
+    var seed = 0x2F6E2B1;
+    return function() {
+      // Robert Jenkins' 32 bit integer hash function. From Octane / V8.
+      seed = ((seed + 0x7ED55D16) + (seed << 12))  & 0xFFFFFFFF;
+      seed = ((seed ^ 0xC761C23C) ^ (seed >>> 19)) & 0xFFFFFFFF;
+      seed = ((seed + 0x165667B1) + (seed << 5))   & 0xFFFFFFFF;
+      seed = ((seed + 0xD3A2646C) ^ (seed << 9))   & 0xFFFFFFFF;
+      seed = ((seed + 0xFD7046C5) + (seed << 3))   & 0xFFFFFFFF;
+      seed = ((seed ^ 0xB55A4F09) ^ (seed >>> 16)) & 0xFFFFFFFF;
+      return (seed & 0xFFFFFFF) / 0x10000000;
+    };
+  }());
 
   var ftable = {};
   function f(sym, n) {
@@ -101,7 +113,7 @@ function generatorFactory(grammar) {
 
 
   function g(sym, n) {
-    var r = choose(f(sym, n));
+    var r = choose(f(sym, n), rand());
     if(r == -1) return null; // no valid options
     return gprime(sym, r, 0, n);
   }
@@ -125,7 +137,7 @@ function generatorFactory(grammar) {
         return g(x.data, n);
       }
       else {
-        var l = choose(fprime(sym, j, k, n)); // paper has i, i, k, n. pretty sure that's a typo
+        var l = choose(fprime(sym, j, k, n), rand()); // paper has i, i, k, n. pretty sure that's a typo
         assert(l !== -1, "Couldn't find a valid choice.");
         return g(x.data, l+1) + gprime(sym, j, k+1, n-(l+1)); // l is a length, not an index
       }
@@ -160,7 +172,7 @@ function generatorFactory(grammar) {
     }
 
     for(var n=start; n<start+range; ++n) {
-      if(choose(f(grammar.start, n)) !== -1) {
+      if(choose(f(grammar.start, n), rand()) !== -1) {
         return n;
       }
     }
@@ -192,7 +204,7 @@ function generatorFactory(grammar) {
     }
     
     for(var length = start; length<start+range; ++length) {
-      if(choose(f(grammar.start, length)) !== -1) {
+      if(choose(f(grammar.start, length), rand()) !== -1) {
         lengths.push(length);
       }
     }

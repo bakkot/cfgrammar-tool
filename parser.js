@@ -21,7 +21,7 @@ var enums = {
 }
 parser.PRODUCEONE = enums.PRODUCEONE;
 parser.PRODUCETWO = enums.PRODUCETWO;
-parser.PRODUCEALL = enums.PRODUCEALL;
+parser.PRODUCEALL = enums.PRODUCEALL; // TODO this should not be a global setting. if you really need, have different parse functions.
 
 
 

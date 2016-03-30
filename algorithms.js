@@ -3,6 +3,13 @@ var assert = require('./assert');
 // pass in the Grammar constructor and its prototype will be modified to have various algorithms
 module.exports = function(Grammar) {
 
+
+// todo annotate almost-terminals, which are nonterminals which can only produce strings consisting only of terminals or strings consisting of terminals and nonterminals (other than itself) which are almost-terminal.
+// todo simplified and aggressive simplified. denulls, standardizes nonterminal names, standardizes rule ordering. aggressive simplified probably invokes a new 'stripped' fn: it reduces the number of rules by folding almost-terminal rules into the things which make them. obviously this can have exponential blowup.
+// possibly also try to remove redundant rules?
+
+
+
 // modify the grammar so each symbol has a 'nullable' property
 // and the grammar to have a 'nullables' property, a list of nullable symbols
 // returns the list of nullables
@@ -513,6 +520,19 @@ Grammar.prototype.deNulled = function() {
   assert(newGrammar.empty || newGrammar.annotateSelfDeriving().length == 0, 'Removing nullables and unit productions did not prevent self-deriving, somehow.');
   
   return newGrammar;
+}
+
+// return a sorted string containing all of the terminals found in strings this grammar can produce.
+Grammar.prototype.alphabet = function() {
+  var deNulled = this.deNulled();
+  if (deNulled.empty) {
+    return '';
+  }
+  var alphabet = [];
+  deNulled.rules.forEach(function(r){
+    r.production.forEach(function(s){ if (s.type === 'T' && alphabet.indexOf(s.data) === -1) alphabet.push(s.data); });
+  });
+  return alphabet.sort().join('');
 }
 
 }

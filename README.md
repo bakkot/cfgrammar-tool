@@ -55,8 +55,9 @@ TODO
 
 * Automatic tokenization. Currently all tokens are implicitly single-character strings, at least on the parsing end, which is often not what you want.
 
-* Port to a language with a proper type system.
+* ~~[Port to a language with a proper type system](https://github.com/bakkot/cfgrammar)~~.
 
+* Put up a demo page on gh-pages.
 
 License
 -------
