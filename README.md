@@ -3,6 +3,7 @@ CFGrammar-Tool
 
 A JavaScript library for working with [context-free grammars](http://en.wikipedia.org/wiki/Context-free_grammar). It's also a node.js module (`npm install cfgrammar-tool`).
 
+Check out the the [demo](http://bakkot.github.io/cfgrammar-tool/).
 
 Features
 --------
@@ -57,7 +58,7 @@ TODO
 
 * ~~[Port to a language with a proper type system](https://github.com/bakkot/cfgrammar)~~.
 
-* Put up a demo page on gh-pages.
+* ~~[Put up a demo page on gh-pages.](http://bakkot.github.io/cfgrammar-tool/)~~
 
 License
 -------
