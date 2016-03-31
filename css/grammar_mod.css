@@ -1,0 +1,14 @@
+.cfg-rewrite {
+  color: blue;
+}
+
+.cfg-symbol {
+  font-weight: bold;
+}
+
+select {
+  height: 30px;
+  width: 100px;
+  background-color: #fff;
+  border: 1px solid #ccc;
+}

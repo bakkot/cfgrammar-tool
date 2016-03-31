@@ -67,48 +67,6 @@ function rewritePrinter(parse) {
 }
 
 
-function astPrinter(parse, collapseUnitProductions, discardImplicitTerminals, ruleRenamingFunction) {
-  // collapseUnitProductions defaults to false. If true, rules of the form X->Y will not generate an additional level in the AST.
-  // discardImplicitTerminals: if a production contains both terminals and nonterminals, children does not contain the terminals.
-  // ruleRenamingFunction should be a function from Rules in the grammar to names of rules (e.g. strings), which will then be used as the 'type' of nodes. If not present, 'type' will be the Rule itself.
-  // Non-terminals in the resulting AST have 'type' and 'children' properties, with 'children' being an array. Terminals have type 'Terminal' and a 'value' property containing their value.
-  
-  var rename = typeof ruleRenamingFunction === 'function';
-  
-  function backPointerToSubtree(bp) {
-    if (collapseUnitProductions && bp.backPointers.length === 1) {
-      var child = bp.backPointers[0];
-      if (child === null) {
-        return {
-          type: 'Terminal',
-          value: bp.rule.production[0].data
-        };
-      } else {
-        return backPointerToSubtree(child);
-      }
-    }
-    var tree = {
-      type: rename ? ruleRenamingFunction(bp.rule) : bp.rule,
-      children: []
-    }
-    var keepTerminals = !(discardImplicitTerminals && bp.backPointers.some(function(c){return c!== null;}));
-    for (var i = 0; i<bp.backPointers.length; ++i) {
-      var current = bp.backPointers[i];
-      if (current === null) {
-        if (keepTerminals) {
-          tree.children.push({
-            type: 'Terminal',
-            value: bp.rule.production[i].data
-          });
-        }
-      } else {
-        tree.children.push(backPointerToSubtree(current));
-      }
-    }
-    return tree;
-  }
-  return backPointerToSubtree(parse.backPointers[0]);
-}
 
 
 // Helper for domRule and domGrammar
@@ -297,7 +255,6 @@ function domGrammarPrinter(grammar) {
 module.exports = {
   subtreePrinter: subtreePrinter,
   rewritePrinter: rewritePrinter,
-  astPrinter: astPrinter,
   domPrinter: domPrinter,
   domGrammarPrinter: domGrammarPrinter
 }

@@ -1,0 +1,95 @@
+<!DOCTYPE html>
+<html lang="en">
+
+  <head>
+    <meta charset="utf-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>CFG Developer</title>
+    
+    
+    <!-- jQuery (necessary for Bootstrap's JavaScript plugins) -->
+    <script src="js/jquery-1.11.1.min.js"></script>
+
+    <script src="js/bootstrap.min.js"></script>
+
+    <script src="js/built.js"></script>
+    <link href="css/grammar.css" rel="stylesheet">
+    <link href="css/grammar_mod.css" rel="stylesheet">
+
+    <link href="css/bootstrap.min.css" rel="stylesheet">
+  </head>
+
+  <body>
+    <div class="navbar navbar-default">
+      <h3 class="navbar-text">CFG Developer</h3>
+    </div>
+    <div class="container">
+      <h1>Create</h1>
+      <p class="instructions">Input your context-free grammar (CFG) here. The start symbol has already been filled in for you.</p>
+      <ul class="instructions-list">
+        <li>The left-hand nonterminal of each production must be filled in.</li>
+        <li>[ &#949; ] - An empty text field corresponds to epsilon.</li>
+        <li>[ <strong>&#124;</strong> ] - For &quot;or&quot;, use the standard pipe character that you use while coding or click "+".</li>
+        <li>Input is case-sensitive. Whitespace is ignored.</li>
+      </ul>
+      <button type="button" class="btn btn-danger" id="reset" title="Reset the current CFG">Reset</button>
+      <button type="button" class="btn btn-info" id="example" title="Fill in an example CFG">Example</button>
+      <form class="form-horizontal" id="grammar" role="form"></form>
+      <div class="clearfix"></div>
+
+      <div class="col-xs-6 new-production">
+        <button id="new-production" type="button" class="btn btn-default btn-lg btn-block"
+         title="Create a new production">
+          <span class="glyphicon glyphicon-plus"></span> &nbsp;Click here or press &quot;Enter&quot; for a new production
+        </button>
+      </div>
+      <div class="clearfix"></div>
+
+      <h1>Verify</h1>
+      <p>This is the CFG you've entered above:</p>
+      <div id="current-grammar"></div>
+      <div id="grammar-info"></div>
+      <div id="grammar-strings"></div>
+
+      <h1>Test</h1>
+      <div class="col-xs-5">
+        <p>To test the CFG above, input test strings here, one per line. An empty line corresponds to the empty string. Results will be shown automatically.</p>
+        <textarea class="form-control" id="test-input" placeholder="Write your test strings here..." rows="6" wrap="off"></textarea>
+      </div>
+
+      <div class="col-xs-7">
+        <p class="text-center">Test Results for CFG</p>
+        <table class="table table-striped table-hover" id="results-table">
+          <thead>
+            <tr>
+              <th>#</th>
+              <th>String</th>
+              <th>Matches</th>
+              <th></th>
+            </tr>
+          </thead>
+          <tbody id="results"></tbody>
+        </table>
+      </div>
+      <div class="clearfix"></div>
+
+      <h1>About</h1>
+      <ul>
+        <li>Code by Bakkot. Runs on <a href="https://github.com/bakkot/cfgrammar-tool">cfgrammar-tool</a>.
+        <li>UI created by Chris Wong for CS103 at Stanford. 
+      </ul>
+    </div>
+    <div id="modalMessage" class="modal" role="dialog" tabindex="-1" aria-hidden="true">
+      <div class="modal-dialog" role="document">
+        <div class="modal-content">
+          <div class="modal-body"></div>
+          <div class="modal-footer">
+            <button type="button" class="btn btn-primary" data-dismiss="modal">OK</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </body>
+
+</html>

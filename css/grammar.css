@@ -1,0 +1,159 @@
+.instructions {
+  margin-bottom: 0px;
+}
+
+.instructions-list {
+  padding-left: 30px;
+}
+
+.btn {
+  margin-right: 5px;
+}
+
+.col-xs-nt,
+.col-xs-pr {
+  min-height: 1px;
+  padding-right: 10px;
+  padding-left: 10px;
+  position: relative;
+}
+
+.col-xs-nt {
+  float: left;
+  min-width: 60px;
+  width: 5.5%;
+}
+
+.col-xs-pr {
+  float: left;
+  min-width: 100px;
+  width: 9%;
+}
+
+div.arrow,
+div.or,
+div.add-rule,
+div.remove {
+  display: inline-block;
+  float: left;
+  font-size: 20px;
+  height: 34px;
+  line-height: 34px;
+  vertical-align: middle;
+}
+
+div.add-rule {
+  font-size: 18px;
+}
+
+div.remove {
+  padding-top: 1px
+}
+
+div.production-row {
+  min-height: 34px;
+  margin: 5px 5px;
+}
+
+span.remove-button {
+  margin-right: 8px;
+}
+
+span.remove-button:hover {
+  color: #AAAAAA;
+  cursor: pointer;
+}
+
+span.add-rule-button:hover {
+  color: #AAAAAA;
+  cursor: pointer;
+}
+
+div.new-production {
+  min-width: 480px;
+}
+
+#grammar {
+  padding: 10px 0px;
+}
+
+#current-grammar {
+  margin-left: 15px;
+}
+
+#test-input {
+  resize: vertical;
+  white-space: nowrap;
+}
+
+div.green {
+  color: green;
+}
+
+div.red {
+  color: red;
+}
+
+#results tr td {
+  width: 60px;
+}
+
+#results tr td+td {
+  white-space: normal;
+  width: auto;
+  word-wrap: break-word;
+}
+
+#results tr td+td+td {
+  width: 90px;
+}
+
+#results tr td+td+td+td {
+  width: 140px;
+}
+
+#results a.derivation-toggle {
+  cursor: pointer;
+}
+
+#results tr.derivation-row td {
+  border: none;
+  font-family: monospace;
+  font-size: 12pt;
+  padding: 0px;
+}
+
+#results div.derivation {
+  padding: 10px;
+}
+
+#results table.derivations {
+  margin: auto;
+}
+
+#results table.derivations th,
+#results table.derivations td,
+#results table.derivations th+th,
+#results table.derivations td+td {
+  padding-top: 0px;
+  width: 50%;
+}
+
+#results table.derivations th {
+  border-bottom: 1px solid gray;
+}
+
+#results table.derivations th,
+#results table.derivations td {
+  padding-right: 10px;
+}
+
+#results table.derivations th+th,
+#results table.derivations td+td {
+  border-left: 1px solid gray;
+  padding-left: 10px;
+}
+
+div.footer p {
+  margin: 5px;
+}
