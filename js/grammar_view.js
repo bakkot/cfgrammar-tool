@@ -70,8 +70,6 @@ function initializeGrammarDOM() {
 
   // Bind click handlers.
   $('#new-production').click(function(event) { newProduction(false); });
-  $('#reset').click(function(event) { resetGrammar(); });
-  $('#example').click(function(event) { exampleGrammar(); });
 
   // Retest CFG any time a key is pressed in the test strings textarea.
   $('#test-input').keyup(testCFG);
@@ -340,25 +338,6 @@ function resetGrammar() {
   }
 };
 
-/**
- * Handler to fill in an example CFG.
- */
-function exampleGrammar(withoutConfirm) {
-  var msg = 'Showing an example CFG will overwrite the current CFG *and* ' +
-            'test strings. Are you sure?';
-  if (withoutConfirm || window.confirm(msg)) {
-    $('#test-input').val('1+2\n4+2\n\n2+5\n3+3');
-    loadGrammar(Grammar([
-      Rule('S', [NT('S'), T('+'), NT('S')]),
-      Rule('S', [NT('T')]),
-      Rule('T', [T('1')]),
-      Rule('T', [T('2')]),
-      Rule('T', [T('3')]),
-      Rule('T', [T('4')])
-    ], 'S'));
-  }
-};
-
 
 /**
  * Overwrites the current grammar with the one given.
@@ -461,7 +440,7 @@ function testCFG() {
   tbody.empty();
 
   // Obtain the test strings and read the user CFG.
-  var strings = $('#test-input').val().toLowerCase().split(/\r?\n/);
+  var strings = $('#test-input').val().toLowerCase().split(/\r?\n/).map(function(s){return s.replace(/\s/g, '');});
   var grammar = readGrammar();
   // Display the toHTML() version of the Grammar to the user.  
   
@@ -670,6 +649,8 @@ window.readGrammar = readGrammar;
  */
 $(document).ready(function() {
   initializeGrammarDOM();
-  //startTest();
-  exampleGrammar(true);
+  function showHelp() {
+    $("#helpModal").modal("show");
+  }
+  $("#helpLink").click(showHelp);
 });
