@@ -126,10 +126,10 @@ function generatorFactory(grammar, deterministic) {
   
     if(x.type == 'T') {
       if(k == tij) {
-        return x.data;
+        return [x.data];
       }
       else {
-        return x.data + gprime(sym, j, k+1, n-1);
+        return [x.data].concat(gprime(sym, j, k+1, n-1));
       }
     }
     else {
@@ -139,20 +139,25 @@ function generatorFactory(grammar, deterministic) {
       else {
         var l = choose(fprime(sym, j, k, n), rand()); // paper has i, i, k, n. pretty sure that's a typo
         assert(l !== -1, "Couldn't find a valid choice.");
-        return g(x.data, l+1) + gprime(sym, j, k+1, n-(l+1)); // l is a length, not an index
+        return g(x.data, l+1).concat(gprime(sym, j, k+1, n-(l+1))); // l is a length, not an index
       }
     }
   }
 
 
-  function generate(n) {
+  function generate(n, opts) {
+    var asList = opts != null && opts.list;
     if(n == 0) {
-      return grammar.makesEpsilon?'':null;
+      return grammar.makesEpsilon ? asList ? [] : '' : null;
     }
     if(grammar.empty) {
       return null;
     }
-    return g(grammar.start, n);
+    var outList = g(grammar.start, n);
+    if (outList == null) {
+      return null;
+    }
+    return asList ? outList : outList.join('');
   }
   
   // TODO probably get rid of this.
