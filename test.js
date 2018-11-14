@@ -100,7 +100,12 @@ var mathGenerator = generator(mathGrammar);
 
 console.log('Arithmetic tests:');
 for(var i=0; i<10; ++i) {
-  var expr = mathGenerator(Math.round(Math.random()*40) + 1);
+  var list = i % 2 === 0;
+  var expr = mathGenerator(Math.round(Math.random()*40) + 1, { list: list });
+  if (list) {
+    assert(Array.isArray(expr));
+    expr = expr.join('');
+  }
   var res = parser.parse(mathGrammar, expr, parser.PRODUCEALL);
   assert(res.length == 1, 'mathGrammar is ambiguous?');
   
