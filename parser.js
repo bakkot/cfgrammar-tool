@@ -27,11 +27,10 @@ parser.PRODUCEALL = enums.PRODUCEALL; // TODO this should not be a global settin
 
 parser.PRODUCECOUNT = enums.PRODUCETWO;
 
-// TODO this is not the best way of doing this.
-NT = types.NT;
-T = types.T;
-Rule = types.Rule;
-Grammar = types.Grammar;
+var NT = types.NT;
+var T = types.T;
+var Rule = types.Rule;
+var Grammar = types.Grammar;
 
 
 // library code, woo
